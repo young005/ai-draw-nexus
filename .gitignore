@@ -27,3 +27,5 @@ dist-ssr
 *.vars
 
 .wrangler
+# bash crash dumps
+bash.exe.stackdump
