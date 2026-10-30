@@ -1,5 +1,5 @@
 import { useChatStore } from '@/stores/chatStore'
-import { useEditorStore } from '@/stores/editorStore'
+import { useEditorStore, selectIsEmpty } from '@/stores/editorStore'
 import { usePayloadStore } from '@/stores/payloadStore'
 import { VersionRepository } from '@/services/versionRepository'
 import { ProjectRepository } from '@/services/projectRepository'
@@ -89,6 +89,8 @@ export function useAIGenerate() {
     updateMessage,
     setStreaming,
   } = useChatStore()
+
+  const canvasIsEmpty = useEditorStore(selectIsEmpty)
 
   const {
     currentProject,
@@ -202,6 +204,7 @@ export function useAIGenerate() {
       updateMessage(assistantMsgId, {
         content: t('ai.generatedSuccess'),
         status: 'complete',
+        code: finalCode,
       })
 
       // Save version
@@ -487,5 +490,34 @@ export function useAIGenerate() {
     return currentCode
   }
 
-  return { generate }
+  /**
+   * 重新发送：找到该助手消息对应的用户消息，移除旧回复后重新生成
+   */
+  const retry = async (assistantMessageId: string) => {
+    const { messages, removeMessage } = useChatStore.getState()
+    const index = messages.findIndex((msg) => msg.id === assistantMessageId)
+    if (index < 0) {
+      showError(t('ai.retryContextMissing'))
+      return
+    }
+
+    // 找到该助手消息之前最近的一条用户消息
+    const userMessage = messages
+      .slice(0, index)
+      .reverse()
+      .find((msg) => msg.role === 'user')
+    if (!userMessage) {
+      showError(t('ai.retryContextMissing'))
+      return
+    }
+
+    // 移除旧的助手消息（以及其后的助手消息）
+    for (const msg of messages.slice(index)) {
+      if (msg.role === 'assistant') removeMessage(msg.id)
+    }
+
+    await generate(userMessage.content, canvasIsEmpty, userMessage.attachments)
+  }
+
+  return { generate, retry }
 }

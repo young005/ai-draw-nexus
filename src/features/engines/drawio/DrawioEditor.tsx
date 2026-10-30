@@ -1,17 +1,10 @@
-import { useCallback, useImperativeHandle, useRef, useState, forwardRef, useEffect } from 'react'
+import { useCallback, useImperativeHandle, useRef, useState, forwardRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { DrawIoEmbed } from 'react-drawio'
 import type { DrawIoEmbedRef, EventExport, EventSave, EventAutoSave } from 'react-drawio'
 import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/Button'
-import Editor from '@monaco-editor/react'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/Tooltip'
-import { X, Copy, Check, Play, Undo2 } from 'lucide-react'
+import { SourceCodePanel } from '@/features/editor/SourceCodePanel'
+import { TooltipProvider } from '@/components/ui/Tooltip'
 
 type ExportFormat = 'svg' | 'png'
 
@@ -45,9 +38,6 @@ export const DrawioEditor = forwardRef<DrawioEditorRef, DrawioEditorProps>(
     const drawioRef = useRef<DrawIoEmbedRef | null>(null)
     const [isReady, setIsReady] = useState(false)
     const [showCodePanel, setShowCodePanel] = useState(false)
-    const [copied, setCopied] = useState(false)
-    const [editedCode, setEditedCode] = useState(data)
-    const [hasChanges, setHasChanges] = useState(false)
 
     // 使用 ref 来跟踪导出请求，避免状态更新的时序问题
     const saveResolverRef = useRef<{
@@ -57,12 +47,6 @@ export const DrawioEditor = forwardRef<DrawioEditorRef, DrawioEditorProps>(
 
     // 用于获取缩略图的 resolver
     const thumbnailResolverRef = useRef<((data: string) => void) | null>(null)
-
-    // Sync editedCode when data prop changes
-    useEffect(() => {
-      setEditedCode(data)
-      setHasChanges(false)
-    }, [data])
 
     // Handle export event - 处理导出回调
     const handleExportCallback = useCallback((exportData: EventExport) => {
@@ -232,44 +216,19 @@ export const DrawioEditor = forwardRef<DrawioEditorRef, DrawioEditorProps>(
       }
     }, [onChange])
 
-    // Copy code handler
-    const handleCopyCode = useCallback(async () => {
-      try {
-        await navigator.clipboard.writeText(editedCode)
-        setCopied(true)
-        setTimeout(() => setCopied(false), 2000)
-      } catch (err) {
-        console.error('Failed to copy code:', err)
-      }
-    }, [editedCode])
-
-    // Handle code edit (for Monaco Editor)
-    const handleCodeChange = useCallback((value: string | undefined) => {
-      const newCode = value || ''
-      setEditedCode(newCode)
-      setHasChanges(newCode !== data)
-    }, [data])
-
     // Apply code changes
-    const handleApplyCode = useCallback(() => {
-      if (editedCode.trim() && editedCode !== data) {
+    const handleApplyCode = useCallback((nextCode: string) => {
+      if (nextCode.trim() && nextCode !== data) {
         // Load the new XML into draw.io
         if (drawioRef.current) {
-          drawioRef.current.load({ xml: editedCode })
+          drawioRef.current.load({ xml: nextCode })
         }
         // Notify parent of change
         if (onChange) {
-          onChange(editedCode)
+          onChange(nextCode)
         }
-        setHasChanges(false)
       }
-    }, [editedCode, data, onChange])
-
-    // Reset code to original
-    const handleResetCode = useCallback(() => {
-      setEditedCode(data)
-      setHasChanges(false)
-    }, [data])
+    }, [data, onChange])
 
     return (
       <TooltipProvider>
@@ -309,101 +268,13 @@ export const DrawioEditor = forwardRef<DrawioEditorRef, DrawioEditorProps>(
 
           {/* Code Panel */}
           {showCodePanel && (
-            <div className="absolute bottom-4 right-4 z-10 w-96 max-h-[70%] flex flex-col border border-border bg-surface shadow-lg">
-              {/* Panel Header */}
-              <div className="flex items-center justify-between border-b border-border px-3 py-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium">{t('drawioEditor.sourceTitle')}</span>
-                  {hasChanges && (
-                    <span className="text-xs text-amber-500">{t('sourceCodePanel.unsaved')}</span>
-                  )}
-                </div>
-                <div className="flex items-center gap-1">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleCopyCode}
-                        className="h-7 w-7 p-0"
-                      >
-                        {copied ? (
-                          <Check className="h-3.5 w-3.5 text-green-500" />
-                        ) : (
-                          <Copy className="h-3.5 w-3.5" />
-                        )}
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>{copied ? t('sourceCodePanel.copied') : t('sourceCodePanel.copyCode')}</TooltipContent>
-                  </Tooltip>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowCodePanel(false)}
-                    className="h-7 w-7 p-0"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              </div>
-              {/* Code Editor */}
-              <div className="flex-1 min-h-0 overflow-hidden">
-                <Editor
-                  height="300px"
-                  defaultLanguage="xml"
-                  value={editedCode}
-                  onChange={handleCodeChange}
-                  theme="vs"
-                  options={{
-                    minimap: { enabled: false },
-                    fontSize: 13,
-                    lineNumbers: 'on',
-                    scrollBeyondLastLine: false,
-                    wordWrap: 'on',
-                    automaticLayout: true,
-                    tabSize: 2,
-                    padding: { top: 8, bottom: 8 },
-                    scrollbar: {
-                      verticalScrollbarSize: 8,
-                      horizontalScrollbarSize: 8,
-                    },
-                  }}
-                />
-              </div>
-              {/* Panel Footer */}
-              <div className="flex items-center justify-end gap-2 border-t border-border px-3 py-2">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleResetCode}
-                      disabled={!hasChanges}
-                      className="gap-1.5"
-                    >
-                      <Undo2 className="h-3.5 w-3.5" />
-                      <span className="text-xs">{t('sourceCodePanel.reset')}</span>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>{t('sourceCodePanel.resetTooltip')}</TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="default"
-                      size="sm"
-                      onClick={handleApplyCode}
-                      disabled={!hasChanges || !editedCode.trim()}
-                      className="gap-1.5"
-                    >
-                      <Play className="h-3.5 w-3.5" />
-                      <span className="text-xs">{t('sourceCodePanel.apply')}</span>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>{t('sourceCodePanel.applyTooltip')}</TooltipContent>
-                </Tooltip>
-              </div>
-            </div>
+            <SourceCodePanel
+              code={data}
+              language="xml"
+              title={t('drawioEditor.sourceTitle')}
+              onApply={handleApplyCode}
+              onClose={() => setShowCodePanel(false)}
+            />
           )}
         </div>
       </TooltipProvider>

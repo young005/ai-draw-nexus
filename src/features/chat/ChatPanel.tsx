@@ -1,6 +1,23 @@
 import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Send, ImagePlus, FileText, User, Bot, X, MessageSquarePlus, Loader2, CheckCircle2, Link,MoveRight } from 'lucide-react'
+import {
+  Send,
+  ImagePlus,
+  FileText,
+  User,
+  Bot,
+  X,
+  MessageSquarePlus,
+  Loader2,
+  CheckCircle2,
+  Link,
+  MoveRight,
+  Copy,
+  RotateCcw,
+  ChevronDown,
+  ChevronUp,
+  PanelLeftClose,
+} from 'lucide-react'
 import { Button, Loading } from '@/components/ui'
 import { useChatStore } from '@/stores/chatStore'
 import { useEditorStore, selectIsEmpty } from '@/stores/editorStore'
@@ -18,7 +35,11 @@ import {
 } from '@/lib/fileUtils'
 import type { Attachment, UrlAttachment } from '@/types'
 
-export function ChatPanel() {
+interface ChatPanelProps {
+  onCollapse?: () => void
+}
+
+export function ChatPanel({ onCollapse }: ChatPanelProps = {}) {
   const { t } = useTranslation()
   const [inputValue, setInputValue] = useState('')
   const [attachments, setAttachments] = useState<Attachment[]>([])
@@ -26,13 +47,14 @@ export function ChatPanel() {
   const [showUrlInput, setShowUrlInput] = useState(false)
   const [urlInputValue, setUrlInputValue] = useState('')
   const [isParsingUrl, setIsParsingUrl] = useState(false)
+  const [expandedCodes, setExpandedCodes] = useState<Record<string, boolean>>({})
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const hasHandledInitialPrompt = useRef(false)
 
   const { messages, isStreaming, initialPrompt, initialAttachments, clearInitialPrompt, clearMessages } = useChatStore()
   const isCanvasEmpty = useEditorStore(selectIsEmpty)
-  const { generate } = useAIGenerate()
+  const { generate, retry } = useAIGenerate()
   const { error: showError } = useToast()
   const { detected, detectFromEvent, importDetected, dismiss } = usePasteSource()
 
@@ -110,6 +132,21 @@ export function ChatPanel() {
     detectFromEvent(e.nativeEvent)
   }
 
+  const toggleCode = (id: string) => {
+    setExpandedCodes((prev) => ({ ...prev, [id]: !prev[id] }))
+  }
+
+  const handleCopyMessage = async (content: string) => {
+    try {
+      await navigator.clipboard.writeText(content)
+    } catch (err) {
+      showError(t('chat.copyFailed'))
+      console.error(err)
+    }
+  }
+
+  const lastAssistantId = [...messages].reverse().find((m) => m.role === 'assistant')?.id
+
   const removeAttachment = (index: number) => {
     setAttachments((prev) => prev.filter((_, i) => i !== index))
   }
@@ -183,15 +220,27 @@ export function ChatPanel() {
             {isCanvasEmpty ? t('chat.modeNew') : t('chat.modeEdit')}
           </p>
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          title={t('chat.newConversation')}
-          onClick={clearMessages}
-          disabled={isStreaming || messages.length === 0}
-        >
-          <MessageSquarePlus className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-1">
+          {onCollapse && (
+            <Button
+              variant="ghost"
+              size="icon"
+              title={t('chat.collapsePanel')}
+              onClick={onCollapse}
+            >
+              <PanelLeftClose className="h-4 w-4" />
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            title={t('chat.newConversation')}
+            onClick={clearMessages}
+            disabled={isStreaming || messages.length === 0}
+          >
+            <MessageSquarePlus className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       {/* Messages */}
@@ -207,13 +256,13 @@ export function ChatPanel() {
           messages.map((msg) => (
             <div
               key={msg.id}
-              className={`flex gap-3 mb-4 ${
+              className={`mb-4 flex items-start gap-1 ${
                 msg.role === 'user' ? 'flex-row-reverse' : ''
               }`}
             >
               {/* Avatar */}
               <div
-                className={`flex h-8 w-8 flex-shrink-0 items-center justify-center ${
+                className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl ${
                   msg.role === 'user'
                     ? 'bg-primary text-surface'
                     : 'border border-border bg-surface text-primary'
@@ -226,55 +275,110 @@ export function ChatPanel() {
                 )}
               </div>
 
-              {/* Content */}
-              <div
-                className={`max-w-[80%] px-3 py-2 ${
-                  msg.role === 'user'
-                    ? 'bg-primary text-surface'
-                    : 'border border-border bg-background'
-                }`}
-              >
-                {/* Show attachments for user messages */}
-                {msg.role === 'user' && msg.attachments && msg.attachments.length > 0 && (
-                  <div className="mb-2 flex flex-wrap gap-2">
-                    {msg.attachments.map((att, idx) => (
-                      <div key={idx} className="text-xs opacity-80">
-                        {att.type === 'image' ? (
-                          <img
-                            src={att.dataUrl}
-                            alt={att.fileName}
-                            className="max-h-20 max-w-20 object-cover border border-surface/30"
-                          />
-                        ) : att.type === 'url' ? (
-                          <span className="flex items-center gap-1">
-                            <Link className="h-3 w-3" />
-                            {att.title}
+              <div className="flex min-w-0 flex-1 items-start gap-1">
+                {/* 用户消息支持复制 */}
+                {msg.role === 'user' && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    title={t('chat.copy')}
+                    onClick={() => void handleCopyMessage(msg.content)}
+                    disabled={!msg.content?.trim()}
+                    className="mt-1 h-8 w-8 rounded-xl border border-border bg-surface p-0 shadow-sm"
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                  </Button>
+                )}
+
+                {/* Content */}
+                <div
+                  className={`min-w-0 max-w-[min(90%,42rem)] rounded-[20px] px-3 py-2 sm:px-4 ${
+                    msg.role === 'user'
+                      ? 'bg-primary text-surface shadow-sm'
+                      : 'border border-border bg-surface text-primary shadow-sm'
+                  }`}
+                >
+                  {/* Show attachments for user messages */}
+                  {msg.role === 'user' && msg.attachments && msg.attachments.length > 0 && (
+                    <div className="mb-2 flex flex-wrap gap-2">
+                      {msg.attachments.map((att, idx) => (
+                        <div key={idx} className="text-xs opacity-80">
+                          {att.type === 'image' ? (
+                            <img
+                              src={att.dataUrl}
+                              alt={att.fileName}
+                              className="max-h-20 max-w-20 object-cover border border-surface/30"
+                            />
+                          ) : att.type === 'url' ? (
+                            <span className="flex items-center gap-1">
+                              <Link className="h-3 w-3" />
+                              {att.title}
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-1">
+                              <FileText className="h-3 w-3" />
+                              {att.fileName}
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {/* AI消息使用状态板显示 */}
+                  {msg.role === 'assistant' ? (
+                    <div className="flex flex-col gap-2">
+                      <div className="flex min-w-0 items-center justify-between gap-2">
+                        <div className="flex min-w-0 items-center gap-2">
+                          {getStatusDisplay(msg.status).icon}
+                          <span className="truncate text-sm font-medium text-primary">
+                            {getStatusDisplay(msg.status).text}
                           </span>
-                        ) : (
-                          <span className="flex items-center gap-1">
-                            <FileText className="h-3 w-3" />
-                            {att.fileName}
-                          </span>
+                        </div>
+                        {msg.code && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            title={
+                              expandedCodes[msg.id]
+                                ? t('chat.collapseCode')
+                                : t('chat.expandCode')
+                            }
+                            onClick={() => toggleCode(msg.id)}
+                            className="h-8 shrink-0 rounded-xl border border-border bg-surface px-2 shadow-sm"
+                          >
+                            {expandedCodes[msg.id] ? (
+                              <ChevronUp className="h-4 w-4" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4" />
+                            )}
+                          </Button>
                         )}
                       </div>
-                    ))}
-                  </div>
-                )}
-                {/* AI消息使用状态板显示 */}
-                {msg.role === 'assistant' ? (
-                  msg.status === 'complete' ? (
-                    <div className="flex items-center gap-2">
-                      {getStatusDisplay(msg.status).icon}
-                      <span className="text-sm">{getStatusDisplay(msg.status).text}</span>
+                      {expandedCodes[msg.id] && msg.code && (
+                        <div className="max-h-56 w-full overflow-auto rounded-[16px] border border-border bg-background p-3">
+                          <pre className="whitespace-pre break-normal font-mono text-xs text-primary">
+                            {msg.code}
+                          </pre>
+                        </div>
+                      )}
                     </div>
                   ) : (
-                    <div className="flex items-center gap-2">
-                      {getStatusDisplay(msg.status).icon}
-                      <span className="text-sm">{getStatusDisplay(msg.status).text}</span>
-                    </div>
-                  )
-                ) : (
-                  <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                    <p className="whitespace-pre-wrap text-sm leading-7">{msg.content}</p>
+                  )}
+                </div>
+
+                {/* 最后一条助手消息支持重新发送 */}
+                {msg.role === 'assistant' && msg.id === lastAssistantId && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    title={t('chat.retry')}
+                    onClick={() => void retry(msg.id)}
+                    disabled={isStreaming || msg.status === 'streaming' || msg.status === 'pending'}
+                    className="mt-1 h-8 w-8 rounded-xl border border-border bg-surface p-0 shadow-sm"
+                  >
+                    <RotateCcw className="h-3.5 w-3.5" />
+                  </Button>
                 )}
               </div>
             </div>

@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Menu, History, Pencil, Check, X, Plus, FolderOpen, Home, Save, Download, Image, Code, FileText } from 'lucide-react'
+import { Menu, History, Pencil, Check, X, Plus, FolderOpen, Home, Save, Download, Image, Code, FileText, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { Button, Input, Loading } from '@/components/ui'
 import { ChatPanel } from '@/features/chat/ChatPanel'
 import { CanvasArea, type CanvasAreaRef } from '@/features/editor/CanvasArea'
@@ -30,6 +30,7 @@ export function EditorPage() {
   const { projectId } = useParams<{ projectId: string }>()
   const navigate = useNavigate()
   const [isVersionPanelOpen, setIsVersionPanelOpen] = useState(false)
+  const [isChatPanelOpen, setIsChatPanelOpen] = useState(true)
   const [isLoading, setIsLoading] = useState(true)
   const [isEditingTitle, setIsEditingTitle] = useState(false)
   const [editedTitle, setEditedTitle] = useState('')
@@ -340,10 +341,29 @@ export function EditorPage() {
 
       {/* Main Content */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Left: Chat Panel */}
-        <div className="w-80 flex-shrink-0 border-r border-border">
-          <ChatPanel />
-        </div>
+        {/* Left: Chat Panel (collapsible) */}
+        {isChatPanelOpen ? (
+          <div className="w-80 flex-shrink-0 border-r border-border">
+            <ChatPanel onCollapse={() => setIsChatPanelOpen(false)} />
+          </div>
+        ) : (
+          <div className="flex w-12 flex-shrink-0 items-start justify-center border-r border-border pt-3">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  title={t('editor.expandChatPanel')}
+                  onClick={() => setIsChatPanelOpen(true)}
+                  className="h-8 w-8"
+                >
+                  <PanelLeftOpen className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t('editor.expandChatPanel')}</TooltipContent>
+            </Tooltip>
+          </div>
+        )}
 
         {/* Center: Canvas */}
         <div className="flex-1">

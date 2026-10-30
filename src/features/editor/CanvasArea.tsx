@@ -137,6 +137,11 @@ export const CanvasArea = forwardRef<CanvasAreaRef>(function CanvasArea(_, ref) 
     }
   }, [engineType, setThumbnailGetter])
 
+  // Handle content change from editors - only update store, no auto-save to database
+  const handleContentChange = useCallback((newContent: string) => {
+    setContent(newContent)
+  }, [setContent])
+
   if (!engineType) {
     return (
       <div className="flex h-full items-center justify-center bg-background text-muted">
@@ -144,11 +149,6 @@ export const CanvasArea = forwardRef<CanvasAreaRef>(function CanvasArea(_, ref) 
       </div>
     )
   }
-
-  // Handle content change from editors - only update store, no auto-save to database
-  const handleContentChange = useCallback((newContent: string) => {
-    setContent(newContent)
-  }, [setContent])
 
   // Render based on engine type
   const renderEngine = () => {

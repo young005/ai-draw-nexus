@@ -1,5 +1,5 @@
 import type { Env, ChatRequest } from './_shared/types'
-import { corsHeaders, handleCors } from './_shared/cors'
+import { corsHeaders } from './_shared/cors'
 import { validateAccessPassword } from './_shared/auth'
 import { callOpenAI, callAnthropic } from './_shared/ai-providers'
 import { streamOpenAI } from './_shared/stream-openai'

@@ -16,6 +16,7 @@ interface ChatState {
   addMessage: (message: Omit<ChatMessage, 'id' | 'timestamp'>) => string
   updateMessage: (id: string, data: Partial<ChatMessage>) => void
   clearMessages: () => void
+  removeMessage: (id: string) => void
   setInitialPrompt: (prompt: string | null, attachments?: Attachment[] | null) => void
   clearInitialPrompt: () => void
   setStreaming: (streaming: boolean) => void
@@ -49,6 +50,10 @@ export const useChatStore = create<ChatState>((set) => ({
   },
 
   clearMessages: () => set({ messages: [] }),
+
+  removeMessage: (id) => set((state) => ({
+    messages: state.messages.filter((msg) => msg.id !== id),
+  })),
 
   setInitialPrompt: (prompt, attachments) => set({ initialPrompt: prompt, initialAttachments: attachments ?? null }),
 

@@ -3,8 +3,15 @@ import { useTranslation } from 'react-i18next'
 import mermaid from 'mermaid'
 import elkLayouts from '@mermaid-js/layout-elk'
 import tidyTreeLayouts from '@mermaid-js/layout-tidy-tree'
-import Editor from '@monaco-editor/react'
 import { cn } from '@/lib/utils'
+import { SourceCodePanel } from '@/features/editor/SourceCodePanel'
+import {
+  MERMAID_THEMES,
+  MERMAID_THEME_IDS,
+  MERMAID_THEME_STORAGE_KEY,
+  DEFAULT_MERMAID_THEME,
+  type MermaidThemeId,
+} from '@/lib/mermaidThemes'
 import { Button } from '@/components/ui/Button'
 import { useEditorStore } from '@/stores/editorStore'
 import {
@@ -31,14 +38,11 @@ import {
   ArrowDown,
   ArrowUp,
   LayoutGrid,
+  Palette,
   GitBranch,
   Network,
   Code,
   X,
-  Copy,
-  Check,
-  Play,
-  Undo2,
 } from 'lucide-react'
 
 interface MermaidRendererProps {
@@ -63,6 +67,14 @@ const DIRECTION_LABEL_KEYS: Record<Direction, string> = {
   BT: 'mermaidRenderer.directionBT',
   LR: 'mermaidRenderer.directionLR',
   RL: 'mermaidRenderer.directionRL',
+}
+
+const THEME_LABEL_SUFFIX: Record<MermaidThemeId, string> = {
+  notion: 'Notion',
+  minimal: 'Minimal',
+  'hand-drawn': 'HandDrawn',
+  material: 'Material',
+  'playful-doodle': 'PlayfulDoodle',
 }
 
 const DIRECTION_ICONS: Record<Direction, typeof ArrowDown> = {
@@ -106,19 +118,14 @@ export const MermaidRenderer = forwardRef<MermaidRendererRef, MermaidRendererPro
   const [isDragging, setIsDragging] = useState(false)
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
   const [layout, setLayout] = useState<LayoutEngine>('dagre')
+  const [theme, setTheme] = useState<MermaidThemeId>(() => {
+    const stored = localStorage.getItem(MERMAID_THEME_STORAGE_KEY) as MermaidThemeId | null
+    return stored && MERMAID_THEME_IDS.includes(stored) ? stored : DEFAULT_MERMAID_THEME
+  })
   const [direction, setDirection] = useState<Direction>('TB')
   const [showCodePanel, setShowCodePanel] = useState(false)
-  const [copied, setCopied] = useState(false)
-  const [editedCode, setEditedCode] = useState(code)
-  const [hasChanges, setHasChanges] = useState(false)
 
   const { setContent } = useEditorStore()
-
-  // Sync editedCode when code prop changes
-  useEffect(() => {
-    setEditedCode(code)
-    setHasChanges(false)
-  }, [code])
 
   // Extract balanced braces content from a string starting at given position
   const extractBalancedBraces = useCallback((str: string, startPos: number): string | null => {
@@ -231,19 +238,21 @@ export const MermaidRenderer = forwardRef<MermaidRendererRef, MermaidRendererPro
         await registerTidyTreeLayouts()
       }
 
-      // Initialize mermaid with base config
-      // 使用莫兰迪色系配色，与 prompts/mermaid.ts 保持一致
+      // Initialize mermaid with the selected theme
+      const themeConfig = MERMAID_THEMES[theme]?.mermaidConfig
       mermaid.initialize({
         startOnLoad: false,
-        theme: 'base',
+        theme: themeConfig?.theme ?? 'base',
         securityLevel: 'loose',
         fontFamily: 'inherit',
+        flowchart: themeConfig?.flowchart,
         themeVariables: {
+          ...themeConfig?.themeVariables,
           // 基础颜色 - 莫兰迪蓝
-          primaryColor: '#e3f2fd',
-          primaryTextColor: '#0d47a1',
-          primaryBorderColor: '#2196f3',
-          lineColor: '#546e7a',
+          primaryColor: themeConfig?.themeVariables?.primaryColor ?? '#e3f2fd',
+          primaryTextColor: themeConfig?.themeVariables?.primaryTextColor ?? '#0d47a1',
+          primaryBorderColor: themeConfig?.themeVariables?.primaryBorderColor ?? '#2196f3',
+          lineColor: themeConfig?.themeVariables?.lineColor ?? '#546e7a',
           // 思维导图分支配色 (cScale0-11) - 低饱和度莫兰迪色系
           cScale0: '#e3f2fd',  // 莫兰迪蓝 (主色)
           cScale1: '#fff3e0',  // 莫兰迪橙
@@ -281,14 +290,24 @@ export const MermaidRenderer = forwardRef<MermaidRendererRef, MermaidRendererPro
       // Render the diagram
       const id = `mermaid-${Date.now()}`
       const { svg: renderedSvg } = await mermaid.render(id, codeWithConfig)
-      setSvg(renderedSvg)
+
+      // 主题附带的额外样式注入 SVG
+      const themeCSS = MERMAID_THEMES[theme]?.mermaidConfig?.themeCSS
+      const finalSvg = themeCSS
+        ? renderedSvg.replace(
+            '</svg>',
+            `<style>${themeCSS}</style></svg>`
+          )
+        : renderedSvg
+
+      setSvg(finalSvg)
       setError(null)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Invalid Mermaid syntax'
       setError(errorMessage)
       setSvg('')
     }
-  }, [injectConfig, layout, direction])
+  }, [injectConfig, layout, direction, theme])
 
   useEffect(() => {
     if (!code.trim()) {
@@ -479,37 +498,18 @@ export const MermaidRenderer = forwardRef<MermaidRendererRef, MermaidRendererPro
     setDirection(value as Direction)
   }, [])
 
-  // Copy code handler
-  const handleCopyCode = useCallback(async () => {
-    try {
-      await navigator.clipboard.writeText(editedCode)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    } catch (err) {
-      console.error('Failed to copy code:', err)
-    }
-  }, [editedCode])
-
-  // Handle code edit (for Monaco Editor)
-  const handleCodeChange = useCallback((value: string | undefined) => {
-    const newCode = value || ''
-    setEditedCode(newCode)
-    setHasChanges(newCode !== code)
-  }, [code])
+  const handleThemeChange = useCallback((value: string) => {
+    const nextTheme = value as MermaidThemeId
+    setTheme(nextTheme)
+    localStorage.setItem(MERMAID_THEME_STORAGE_KEY, nextTheme)
+  }, [])
 
   // Apply code changes
-  const handleApplyCode = useCallback(() => {
-    if (editedCode.trim() && editedCode !== code) {
-      setContent(editedCode)
-      setHasChanges(false)
+  const handleApplyCode = useCallback((nextCode: string) => {
+    if (nextCode.trim() && nextCode !== code) {
+      setContent(nextCode)
     }
-  }, [editedCode, code, setContent])
-
-  // Reset code to original
-  const handleResetCode = useCallback(() => {
-    setEditedCode(code)
-    setHasChanges(false)
-  }, [code])
+  }, [code, setContent])
 
   if (!code.trim()) {
     return (
@@ -555,6 +555,30 @@ export const MermaidRenderer = forwardRef<MermaidRendererRef, MermaidRendererPro
       >
         {/* Toolbar */}
         <div className="flex items-center gap-1 border-b border-border bg-surface px-2 py-2">
+          {/* Theme selector */}
+          <DropdownMenu>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="gap-1.5">
+                    <Palette className="h-4 w-4" />
+                    <span className="text-xs">{t(`mermaidRenderer.theme${THEME_LABEL_SUFFIX[theme]}`)}</span>
+                  </Button>
+                </DropdownMenuTrigger>
+              </TooltipTrigger>
+              <TooltipContent>{t('mermaidRenderer.theme')}</TooltipContent>
+            </Tooltip>
+            <DropdownMenuContent>
+              <DropdownMenuRadioGroup value={theme} onValueChange={handleThemeChange}>
+                {MERMAID_THEME_IDS.map((id) => (
+                  <DropdownMenuRadioItem key={id} value={id}>
+                    {t(`mermaidRenderer.theme${THEME_LABEL_SUFFIX[id]}`)}
+                  </DropdownMenuRadioItem>
+                ))}
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           {/* Layout selector */}
           <DropdownMenu>
             <Tooltip>
@@ -690,101 +714,13 @@ export const MermaidRenderer = forwardRef<MermaidRendererRef, MermaidRendererPro
 
         {/* Code Panel */}
         {showCodePanel && (
-          <div className="absolute bottom-4 right-4 w-96 max-h-[70%] flex flex-col border border-border bg-surface shadow-lg">
-            {/* Panel Header */}
-            <div className="flex items-center justify-between border-b border-border px-3 py-2">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium">{t('mermaidRenderer.sourceTitle')}</span>
-                {hasChanges && (
-                  <span className="text-xs text-amber-500">{t('sourceCodePanel.unsaved')}</span>
-                )}
-              </div>
-              <div className="flex items-center gap-1">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleCopyCode}
-                      className="h-7 w-7 p-0"
-                    >
-                      {copied ? (
-                        <Check className="h-3.5 w-3.5 text-green-500" />
-                      ) : (
-                        <Copy className="h-3.5 w-3.5" />
-                      )}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>{copied ? t('sourceCodePanel.copied') : t('sourceCodePanel.copyCode')}</TooltipContent>
-                </Tooltip>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowCodePanel(false)}
-                  className="h-7 w-7 p-0"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            </div>
-            {/* Code Editor */}
-            <div className="flex-1 min-h-0 overflow-hidden">
-              <Editor
-                height="300px"
-                defaultLanguage="mermaid"
-                value={editedCode}
-                onChange={handleCodeChange}
-                theme="vs"
-                options={{
-                  minimap: { enabled: false },
-                  fontSize: 13,
-                  lineNumbers: 'on',
-                  scrollBeyondLastLine: false,
-                  wordWrap: 'on',
-                  automaticLayout: true,
-                  tabSize: 2,
-                  padding: { top: 8, bottom: 8 },
-                  scrollbar: {
-                    verticalScrollbarSize: 8,
-                    horizontalScrollbarSize: 8,
-                  },
-                }}
-              />
-            </div>
-            {/* Panel Footer */}
-            <div className="flex items-center justify-end gap-2 border-t border-border px-3 py-2">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleResetCode}
-                    disabled={!hasChanges}
-                    className="gap-1.5"
-                  >
-                    <Undo2 className="h-3.5 w-3.5" />
-                    <span className="text-xs">{t('sourceCodePanel.reset')}</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>{t('sourceCodePanel.resetTooltip')}</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="default"
-                    size="sm"
-                    onClick={handleApplyCode}
-                    disabled={!hasChanges || !editedCode.trim()}
-                    className="gap-1.5"
-                  >
-                    <Play className="h-3.5 w-3.5" />
-                    <span className="text-xs">{t('sourceCodePanel.apply')}</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>{t('sourceCodePanel.applyTooltip')}</TooltipContent>
-              </Tooltip>
-            </div>
-          </div>
+          <SourceCodePanel
+            code={code}
+            language="mermaid"
+            title={t('mermaidRenderer.sourceTitle')}
+            onApply={handleApplyCode}
+            onClose={() => setShowCodePanel(false)}
+          />
         )}
       </div>
     </TooltipProvider>

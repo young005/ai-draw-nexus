@@ -3,16 +3,10 @@ import { useTranslation } from 'react-i18next'
 import { Excalidraw, exportToBlob, exportToSvg, getSceneVersion, restoreElements, convertToExcalidrawElements } from '@excalidraw/excalidraw'
 import '@excalidraw/excalidraw/index.css'
 import type { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types'
-import Editor from '@monaco-editor/react'
 import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/Button'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/Tooltip'
-import { Code, X, Copy, Check, Play, Undo2 } from 'lucide-react'
+import { SourceCodePanel } from '@/features/editor/SourceCodePanel'
+import { TooltipProvider } from '@/components/ui/Tooltip'
+import { Code } from 'lucide-react'
 
 interface ExcalidrawEditorProps {
   data: string // JSON string
@@ -97,9 +91,6 @@ export const ExcalidrawEditor = forwardRef<ExcalidrawEditorRef, ExcalidrawEditor
   const [excalidrawAPI, setExcalidrawAPI] = useState<ExcalidrawImperativeAPI | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [showCodePanel, setShowCodePanel] = useState(false)
-  const [copied, setCopied] = useState(false)
-  const [editedCode, setEditedCode] = useState(data)
-  const [hasChanges, setHasChanges] = useState(false)
 
   // Refs for tracking scene version and preventing loops
   const lastSceneVersionRef = useRef(0)
@@ -174,12 +165,6 @@ export const ExcalidrawEditor = forwardRef<ExcalidrawEditorRef, ExcalidrawEditor
     }
   }, [initialData])
 
-  // Sync editedCode when data prop changes
-  useEffect(() => {
-    setEditedCode(data)
-    setHasChanges(false)
-  }, [data])
-
   // Update canvas when data prop changes from external source (e.g., AI generation)
   useEffect(() => {
     if (!excalidrawAPI || !data.trim()) return
@@ -210,30 +195,12 @@ export const ExcalidrawEditor = forwardRef<ExcalidrawEditorRef, ExcalidrawEditor
     }
   }, [data, excalidrawAPI])
 
-  // Copy code handler
-  const handleCopyCode = useCallback(async () => {
-    try {
-      await navigator.clipboard.writeText(editedCode)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    } catch (err) {
-      console.error('Failed to copy code:', err)
-    }
-  }, [editedCode])
-
-  // Handle code edit (for Monaco Editor)
-  const handleCodeChange = useCallback((value: string | undefined) => {
-    const newCode = value || ''
-    setEditedCode(newCode)
-    setHasChanges(newCode !== data)
-  }, [data])
-
   // Apply code changes - use updateScene API to update canvas
-  const handleApplyCode = useCallback(() => {
-    if (!editedCode.trim() || !excalidrawAPI) return
+  const handleApplyCode = useCallback((nextCode: string) => {
+    if (!nextCode.trim() || !excalidrawAPI) return
 
     try {
-      const parsed = JSON.parse(editedCode)
+      const parsed = JSON.parse(nextCode)
       // Support both array format and object format
       const elementsData = Array.isArray(parsed) ? parsed : parsed.elements
 
@@ -253,19 +220,12 @@ export const ExcalidrawEditor = forwardRef<ExcalidrawEditorRef, ExcalidrawEditor
 
       // Notify parent of change
       if (onChange) {
-        onChange(editedCode)
+        onChange(nextCode)
       }
-      setHasChanges(false)
     } catch (err) {
       console.error('Failed to apply code:', err)
     }
-  }, [editedCode, excalidrawAPI, onChange])
-
-  // Reset code to original
-  const handleResetCode = useCallback(() => {
-    setEditedCode(data)
-    setHasChanges(false)
-  }, [data])
+  }, [excalidrawAPI, onChange])
 
   // Export as SVG
   const exportAsSvg = useCallback(async () => {
@@ -459,101 +419,13 @@ export const ExcalidrawEditor = forwardRef<ExcalidrawEditorRef, ExcalidrawEditor
 
         {/* Code Panel */}
         {showCodePanel && (
-          <div className="absolute bottom-4 right-4 z-10 w-96 max-h-[70%] flex flex-col border border-border bg-surface shadow-lg">
-            {/* Panel Header */}
-            <div className="flex items-center justify-between border-b border-border px-3 py-2">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium">{t('excalidrawEditor.sourceTitle')}</span>
-                {hasChanges && (
-                  <span className="text-xs text-amber-500">{t('sourceCodePanel.unsaved')}</span>
-                )}
-              </div>
-              <div className="flex items-center gap-1">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleCopyCode}
-                      className="h-7 w-7 p-0"
-                    >
-                      {copied ? (
-                        <Check className="h-3.5 w-3.5 text-green-500" />
-                      ) : (
-                        <Copy className="h-3.5 w-3.5" />
-                      )}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>{copied ? t('sourceCodePanel.copied') : t('sourceCodePanel.copyCode')}</TooltipContent>
-                </Tooltip>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowCodePanel(false)}
-                  className="h-7 w-7 p-0"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            </div>
-            {/* Code Editor */}
-            <div className="flex-1 min-h-0 overflow-hidden">
-              <Editor
-                height="300px"
-                defaultLanguage="json"
-                value={editedCode}
-                onChange={handleCodeChange}
-                theme="vs"
-                options={{
-                  minimap: { enabled: false },
-                  fontSize: 13,
-                  lineNumbers: 'on',
-                  scrollBeyondLastLine: false,
-                  wordWrap: 'on',
-                  automaticLayout: true,
-                  tabSize: 2,
-                  padding: { top: 8, bottom: 8 },
-                  scrollbar: {
-                    verticalScrollbarSize: 8,
-                    horizontalScrollbarSize: 8,
-                  },
-                }}
-              />
-            </div>
-            {/* Panel Footer */}
-            <div className="flex items-center justify-end gap-2 border-t border-border px-3 py-2">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleResetCode}
-                    disabled={!hasChanges}
-                    className="gap-1.5"
-                  >
-                    <Undo2 className="h-3.5 w-3.5" />
-                    <span className="text-xs">{t('sourceCodePanel.reset')}</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>{t('sourceCodePanel.resetTooltip')}</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="default"
-                    size="sm"
-                    onClick={handleApplyCode}
-                    disabled={!hasChanges || !editedCode.trim()}
-                    className="gap-1.5"
-                  >
-                    <Play className="h-3.5 w-3.5" />
-                    <span className="text-xs">{t('sourceCodePanel.apply')}</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>{t('sourceCodePanel.applyTooltip')}</TooltipContent>
-              </Tooltip>
-            </div>
-          </div>
+          <SourceCodePanel
+            code={data}
+            language="json"
+            title={t('excalidrawEditor.sourceTitle')}
+            onApply={handleApplyCode}
+            onClose={() => setShowCodePanel(false)}
+          />
         )}
       </div>
     </TooltipProvider>

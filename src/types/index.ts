@@ -51,6 +51,8 @@ export interface ChatMessage {
   status: 'pending' | 'streaming' | 'complete' | 'error'
   avatar?: string
   attachments?: Attachment[]
+  /** 助手消息生成的图表源码，可展开查看 */
+  code?: string
 }
 
 // Payload Message (Message Payload Store - OpenAI compatible)
