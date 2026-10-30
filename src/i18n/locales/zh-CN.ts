@@ -37,6 +37,7 @@ export const zh_CN = {
     projects: "项目管理",
     profile: "用户配置",
     about: "关于",
+    landing: "官网",
   },
   header: {
     tutorial: "使用教程",

@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { TooltipProvider, Toaster } from '@/components/ui'
-import { HomePage, ProjectsPage, EditorPage, ProfilePage, AboutPage } from '@/pages'
+import { HomePage, LandingPage, ProjectsPage, EditorPage, ProfilePage, AboutPage } from '@/pages'
 
 function App() {
   return (
@@ -8,6 +8,7 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<HomePage />} />
+          <Route path="/landing" element={<LandingPage />} />
           <Route path="/projects" element={<ProjectsPage />} />
           <Route path="/editor/:projectId" element={<EditorPage />} />
           <Route path="/profile" element={<ProfilePage />} />

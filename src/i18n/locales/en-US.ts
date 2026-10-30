@@ -37,6 +37,7 @@ export const en_US = {
     projects: "Projects",
     profile: "Settings",
     about: "About",
+    landing: "Website",
   },
   header: {
     tutorial: "Tutorial",

@@ -9,7 +9,8 @@ import {
   ShoppingCart,
   FolderOpen,
   BookOpen,
-  CassetteTape
+  CassetteTape,
+  Globe
 } from 'lucide-react'
 import type { TFunction } from 'i18next'
 import type { EngineType } from '@/types'
@@ -34,6 +35,7 @@ export function getNavItems(t: TFunction) {
     { icon: FolderOpen, label: t('nav.projects'), path: '/projects' },
     { icon: User, label: t('nav.profile'), path: '/profile' },
     { icon: CassetteTape, label: t('nav.about'), path: '/about' },
+    { icon: Globe, label: t('nav.landing'), path: '/landing' },
   ]
 }
 
