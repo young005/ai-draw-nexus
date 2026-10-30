@@ -1,31 +1,46 @@
 @import "tailwindcss";
 
-/* Modern Design System - Custom Theme */
+/* Design tokens — 与参考站线上版本保持一致 */
 @theme {
-  /* Colors */
-  --color-pure-black: #000000;
-  --color-deep-gray: #1a1a1a;
-  --color-background-warm: #FAF9F7;
-  --color-pure-white: #FFFFFF;
-  --color-border-light: #EAEAEA;
-  --color-text-muted: #888888;
-  --color-accent-orange: #FF6B35;
-  --color-accent-orange-light: #FFF4EE;
+  /* Brand */
+  --color-brand: #0f172a;
+  --color-brand-strong: #000;
+  --color-brand-soft: #f1f5f9;
+  --color-brand-hover: #5753d0;
+  --color-brand-active: #4440bf;
 
-  /* Semantic Color Mapping */
-  --color-primary: var(--color-deep-gray);
-  --color-secondary: var(--color-deep-gray);
-  --color-background: var(--color-background-warm);
-  --color-surface: var(--color-pure-white);
-  --color-border: var(--color-border-light);
-  --color-muted: var(--color-text-muted);
-  --color-accent: var(--color-accent-orange);
-  --color-accent-light: var(--color-accent-orange-light);
+  /* Semantic colors */
+  --color-primary: #0f172a;
+  --color-secondary: #475569;
+  --color-background: #f8fafc;
+  --color-surface: #fff;
+  --color-surface-raised: #fff;
+  --color-panel: #f1f5f9;
+  --color-border: #0f172a14;
+  --color-muted: #94a3b8;
+  --color-muted-foreground: #64748b;
+
+  /* Status colors */
+  --color-success: #059669;
+  --color-success-soft: #d1fae5;
+  --color-warning: #d97706;
+  --color-warning-soft: #fef3c7;
+  --color-danger: #e11d48;
+  --color-info: #0284c7;
+  --color-info-soft: #e0f2fe;
+
+  /* 旧类名兼容（映射到品牌色） */
+  --color-accent: var(--color-brand-hover);
+  --color-accent-light: var(--color-brand-soft);
+
+  /* Fonts */
+  --font-sans: "Inter", "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
 }
 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: var(--color-background);
