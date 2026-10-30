@@ -7,16 +7,16 @@ import { useEditorStore, selectIsEmpty } from '@/stores/editorStore'
 import { useAIGenerate } from '@/hooks/useAIGenerate'
 import { useToast } from '@/hooks/useToast'
 import { aiService } from '@/services/aiService'
+import { usePasteSource } from '@/hooks/usePasteSource'
+import { PasteSourceBanner } from '@/features/project/PasteSourceBanner'
 import {
-  validateImageFile,
-  validateDocumentFile,
-  fileToBase64,
-  parseDocument,
+  extractFilesFromClipboard,
+  toAttachment,
   selectFiles,
   SUPPORTED_IMAGE_TYPES,
   SUPPORTED_DOCUMENT_EXTENSIONS,
 } from '@/lib/fileUtils'
-import type { Attachment, ImageAttachment, DocumentAttachment, UrlAttachment } from '@/types'
+import type { Attachment, UrlAttachment } from '@/types'
 
 export function ChatPanel() {
   const { t } = useTranslation()
@@ -34,6 +34,7 @@ export function ChatPanel() {
   const isCanvasEmpty = useEditorStore(selectIsEmpty)
   const { generate } = useAIGenerate()
   const { error: showError } = useToast()
+  const { detected, detectFromEvent, importDetected, dismiss } = usePasteSource()
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -61,23 +62,33 @@ export function ChatPanel() {
   const handleImageUpload = async () => {
     const files = await selectFiles(SUPPORTED_IMAGE_TYPES.join(','))
     if (!files || files.length === 0) return
+    await addFilesToAttachments(Array.from(files))
+  }
 
+  const handleDocumentUpload = async () => {
+    const files = await selectFiles(SUPPORTED_DOCUMENT_EXTENSIONS.join(','))
+    if (!files || files.length === 0) return
+    await addFilesToAttachments(Array.from(files))
+  }
+
+  /**
+   * 把文件转换成附件并加入附件列表
+   */
+  const addFilesToAttachments = async (files: File[]) => {
     setIsProcessingFile(true)
     try {
-      const file = files[0]
-      const validation = validateImageFile(file)
-      if (!validation.valid) {
-        showError(validation.error!)
-        return
+      const converted: Attachment[] = []
+      for (const file of files) {
+        const { attachment, error } = await toAttachment(file)
+        if (error) {
+          showError(error)
+          continue
+        }
+        if (attachment) converted.push(attachment)
       }
-
-      const dataUrl = await fileToBase64(file)
-      const imageAttachment: ImageAttachment = {
-        type: 'image',
-        dataUrl,
-        fileName: file.name,
+      if (converted.length > 0) {
+        setAttachments((prev) => [...prev, ...converted])
       }
-      setAttachments((prev) => [...prev, imageAttachment])
     } catch (err) {
       showError(t('chat.imageProcessFailed'))
       console.error(err)
@@ -86,32 +97,17 @@ export function ChatPanel() {
     }
   }
 
-  const handleDocumentUpload = async () => {
-    const files = await selectFiles(SUPPORTED_DOCUMENT_EXTENSIONS.join(','))
-    if (!files || files.length === 0) return
-
-    setIsProcessingFile(true)
-    try {
-      const file = files[0]
-      const validation = validateDocumentFile(file)
-      if (!validation.valid) {
-        showError(validation.error!)
-        return
-      }
-
-      const content = await parseDocument(file)
-      const docAttachment: DocumentAttachment = {
-        type: 'document',
-        content,
-        fileName: file.name,
-      }
-      setAttachments((prev) => [...prev, docAttachment])
-    } catch (err) {
-      showError(t('chat.documentProcessFailed'))
-      console.error(err)
-    } finally {
-      setIsProcessingFile(false)
+  /**
+   * 粘贴处理：有文件则转成附件，纯文本则尝试识别为图表源码
+   */
+  const handlePaste = async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const files = extractFilesFromClipboard(e.nativeEvent)
+    if (files.length > 0) {
+      e.preventDefault()
+      await addFilesToAttachments(files)
+      return
     }
+    detectFromEvent(e.nativeEvent)
   }
 
   const removeAttachment = (index: number) => {
@@ -327,6 +323,15 @@ export function ChatPanel() {
 
       {/* Input Area - 优化后的大输入框设计 */}
       <div className="border-t border-border p-4">
+        {detected && (
+          <div className="mb-2">
+            <PasteSourceBanner
+              engineType={detected.engineType}
+              onImport={() => void importDetected()}
+              onDismiss={dismiss}
+            />
+          </div>
+        )}
         <div className="relative flex flex-col border border-border rounded-lg bg-background focus-within:border-primary transition-colors">
           {/* Textarea */}
           <textarea
@@ -335,6 +340,7 @@ export function ChatPanel() {
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
             disabled={isStreaming}
             rows={1}
             className="w-full resize-none bg-transparent px-4 pt-3 pb-12 text-sm outline-none placeholder:text-muted disabled:opacity-50"

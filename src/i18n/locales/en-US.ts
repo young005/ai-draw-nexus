@@ -399,6 +399,7 @@ export const en_US = {
     fixPrompt: "Please fix errors in the Mermaid code below and return only the corrected code.\nError: \"\"\"{{error}}\"\"\"\nCurrent code: \"\"\"{{code}}\"\"\"",
     changeSummaryInitial: "Initial generation",
     changeSummaryEdit: "AI edit",
+    changeSummaryImport: "Imported",
     changeSummaryRetry: "AI retry",
   },
   errors: {
@@ -413,6 +414,7 @@ export const en_US = {
     parseUrlFailed: "Failed to parse URL",
     unknownError: "Unknown error",
     quotaExceeded: "Daily quota exhausted. Try again tomorrow or set an access password.",
+    unsupportedFileType: "Unsupported file type: {{type}}",
   },
   landing: {
     heroBadge: "Now with Multimodal AI Support",
@@ -470,6 +472,14 @@ export const en_US = {
   toast: {
     successTitle: "Success",
     errorTitle: "Error",
+  },
+  paste: {
+    detected: "Detected {{engine}} diagram source",
+    importAction: "Import as new project",
+    dismiss: "Ignore",
+    imported: "Imported as a new project",
+    failed: "Import failed",
+    fileFailed: "Failed to process pasted file",
   },
 }
 

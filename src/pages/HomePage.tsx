@@ -6,17 +6,19 @@ import { Button, Loading } from '@/components/ui'
 import { AppSidebar, AppHeader, CreateProjectDialog } from '@/components/layout'
 import { getEngines, getQuickActions } from '@/constants'
 import { formatDate } from '@/lib/utils'
-import type { EngineType, Project, UrlAttachment, Attachment, ImageAttachment, DocumentAttachment } from '@/types'
+import type { EngineType, Project, UrlAttachment, Attachment } from '@/types'
 import { ProjectRepository } from '@/services/projectRepository'
 import { useChatStore } from '@/stores/chatStore'
 import { aiService } from '@/services/aiService'
 import { useToast } from '@/hooks/useToast'
 import {
-  fileToBase64,
-  parseDocument,
-  validateImageFile,
+  extractFilesFromClipboard,
+  toAttachment,
   SUPPORTED_IMAGE_TYPES,
+  SUPPORTED_DOCUMENT_EXTENSIONS,
 } from '@/lib/fileUtils'
+import { usePasteSource } from '@/hooks/usePasteSource'
+import { PasteSourceBanner } from '@/features/project/PasteSourceBanner'
 
 export function HomePage() {
   const { t } = useTranslation()
@@ -26,8 +28,7 @@ export function HomePage() {
   const [isLoading, setIsLoading] = useState(false)
   const [recentProjects, setRecentProjects] = useState<Project[]>([])
   const [showEngineDropdown, setShowEngineDropdown] = useState(false)
-  const [attachments, setAttachments] = useState<File[]>([])
-  const [urlAttachments, setUrlAttachments] = useState<UrlAttachment[]>([])
+  const [attachments, setAttachments] = useState<Attachment[]>([])
   const [showUrlInput, setShowUrlInput] = useState(false)
   const [urlInputValue, setUrlInputValue] = useState('')
   const [isParsingUrl, setIsParsingUrl] = useState(false)
@@ -35,6 +36,7 @@ export function HomePage() {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const setInitialPrompt = useChatStore((state) => state.setInitialPrompt)
   const { error: showError } = useToast()
+  const { detected, detectFromEvent, importDetected, dismiss } = usePasteSource()
 
   // 新建项目弹窗状态
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
@@ -71,34 +73,8 @@ export function HomePage() {
         engineType: selectedEngine,
       })
 
-      // 转换文件附件为 Attachment 类型
-      const convertedAttachments: Attachment[] = []
-
-      for (const file of attachments) {
-        if (SUPPORTED_IMAGE_TYPES.includes(file.type)) {
-          const dataUrl = await fileToBase64(file)
-          const imageAtt: ImageAttachment = {
-            type: 'image',
-            dataUrl,
-            fileName: file.name,
-          }
-          convertedAttachments.push(imageAtt)
-        } else {
-          const content = await parseDocument(file)
-          const docAtt: DocumentAttachment = {
-            type: 'document',
-            content,
-            fileName: file.name,
-          }
-          convertedAttachments.push(docAtt)
-        }
-      }
-
-      // 添加 URL 附件
-      convertedAttachments.push(...urlAttachments)
-
       // 传递 prompt 和附件
-      const allAttachments = convertedAttachments.length > 0 ? convertedAttachments : null
+      const allAttachments = attachments.length > 0 ? [...attachments] : null
       setInitialPrompt(prompt.trim(), allAttachments)
       navigate(`/editor/${project.id}`)
     } catch (error) {
@@ -126,19 +102,47 @@ export function HomePage() {
     fileInputRef.current?.click()
   }
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
-    if (files) {
-      setAttachments(prev => [...prev, ...Array.from(files)])
+    if (!files || files.length === 0) return
+    await addFilesToAttachments(Array.from(files))
+    // 允许再次选择同一文件
+    e.target.value = ''
+  }
+
+  /**
+   * 把文件转换成附件并加入附件列表
+   */
+  const addFilesToAttachments = async (files: File[]) => {
+    const converted: Attachment[] = []
+    for (const file of files) {
+      const { attachment, error } = await toAttachment(file)
+      if (error) {
+        showError(error)
+        continue
+      }
+      if (attachment) converted.push(attachment)
     }
+    if (converted.length > 0) {
+      setAttachments(prev => [...prev, ...converted])
+    }
+  }
+
+  /**
+   * 粘贴处理：有文件则转成附件，纯文本则尝试识别为图表源码
+   */
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const files = extractFilesFromClipboard(e.nativeEvent)
+    if (files.length > 0) {
+      e.preventDefault()
+      void addFilesToAttachments(files)
+      return
+    }
+    detectFromEvent(e.nativeEvent)
   }
 
   const removeAttachment = (index: number) => {
     setAttachments(prev => prev.filter((_, i) => i !== index))
-  }
-
-  const removeUrlAttachment = (index: number) => {
-    setUrlAttachments(prev => prev.filter((_, i) => i !== index))
   }
 
   const handleUrlSubmit = async () => {
@@ -155,7 +159,7 @@ export function HomePage() {
           url: result.data.url,
           title: result.data.title,
         }
-        setUrlAttachments(prev => [...prev, urlAttachment])
+        setAttachments(prev => [...prev, urlAttachment])
         setUrlInputValue('')
         setShowUrlInput(false)
       }
@@ -208,37 +212,41 @@ export function HomePage() {
           {/* Chat Input Box */}
           <div className="mb-6 w-full max-w-2xl">
             <div className="rounded-2xl border border-border bg-surface p-4 shadow-sm transition-shadow focus-within:shadow-md">
+              {/* 粘贴源码提示 */}
+              {detected && (
+                <div className="mb-3">
+                  <PasteSourceBanner
+                    engineType={detected.engineType}
+                    onImport={() => void importDetected()}
+                    onDismiss={dismiss}
+                  />
+                </div>
+              )}
+
               {/* 附件预览区域 */}
-              {(attachments.length > 0 || urlAttachments.length > 0) && (
+              {attachments.length > 0 && (
                 <div className="mb-3 flex flex-wrap gap-2">
-                  {attachments.map((file, index) => (
+                  {attachments.map((att, index) => (
                     <div
-                      key={`file-${index}`}
+                      key={`${att.type}-${index}`}
                       className="flex items-center gap-2 rounded-lg bg-background px-3 py-1.5 text-sm"
                     >
-                      <Paperclip className="h-3 w-3 text-muted" />
+                      {att.type === 'image' ? (
+                        <img
+                          src={att.dataUrl}
+                          alt={att.fileName}
+                          className="h-5 w-5 object-cover"
+                        />
+                      ) : att.type === 'url' ? (
+                        <Link className="h-3 w-3 text-muted" />
+                      ) : (
+                        <Paperclip className="h-3 w-3 text-muted" />
+                      )}
                       <span className="max-w-[150px] truncate text-primary">
-                        {file.name}
+                        {att.type === 'url' ? att.title : att.fileName}
                       </span>
                       <button
                         onClick={() => removeAttachment(index)}
-                        className="text-muted hover:text-primary"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
-                  {urlAttachments.map((urlAtt, index) => (
-                    <div
-                      key={`url-${index}`}
-                      className="flex items-center gap-2 rounded-lg bg-background px-3 py-1.5 text-sm"
-                    >
-                      <Link className="h-3 w-3 text-muted" />
-                      <span className="max-w-[150px] truncate text-primary">
-                        {urlAtt.title}
-                      </span>
-                      <button
-                        onClick={() => removeUrlAttachment(index)}
                         className="text-muted hover:text-primary"
                       >
                         ×
@@ -254,6 +262,7 @@ export function HomePage() {
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 onKeyDown={handleKeyDown}
+                onPaste={handlePaste}
                 disabled={isLoading}
                 className="min-h-[60px] w-full resize-none bg-transparent text-primary placeholder:text-muted focus:outline-none"
                 rows={2}
@@ -266,7 +275,7 @@ export function HomePage() {
                 multiple
                 onChange={handleFileChange}
                 className="hidden"
-                accept="image/*,.pdf,.doc,.docx,.txt"
+                accept={[...SUPPORTED_IMAGE_TYPES, ...SUPPORTED_DOCUMENT_EXTENSIONS].join(',')}
               />
 
               {/* 底部工具栏 */}

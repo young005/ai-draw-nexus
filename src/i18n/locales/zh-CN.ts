@@ -399,6 +399,7 @@ export const zh_CN = {
     fixPrompt: "请修复下面 Mermaid 代码中的错误，只返回修复后的代码。\n报错：\"\"\"{{error}}\"\"\"\n当前代码：\"\"\"{{code}}\"\"\"",
     changeSummaryInitial: "初始生成",
     changeSummaryEdit: "AI 修改",
+    changeSummaryImport: "导入",
     changeSummaryRetry: "AI 重试",
   },
   errors: {
@@ -413,6 +414,7 @@ export const zh_CN = {
     parseUrlFailed: "解析URL失败",
     unknownError: "未知错误",
     quotaExceeded: "今日配额已用完，请明天再试或设置访问密码",
+    unsupportedFileType: "不支持的文件类型：{{type}}",
   },
   landing: {
     heroBadge: "现已支持多模态 AI 识别",
@@ -470,6 +472,14 @@ export const zh_CN = {
   toast: {
     successTitle: "成功",
     errorTitle: "错误",
+  },
+  paste: {
+    detected: "检测到 {{engine}} 图表源码",
+    importAction: "导入为新项目",
+    dismiss: "忽略",
+    imported: "已导入为新项目",
+    failed: "导入失败",
+    fileFailed: "粘贴文件处理失败",
   },
 }
 

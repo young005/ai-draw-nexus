@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Plus, Trash2, Sparkles, Pencil } from 'lucide-react'
+import { Plus, Trash2, Sparkles, Pencil, Upload } from 'lucide-react'
 import {
   Button,
   Input,
@@ -14,6 +14,7 @@ import {
   Loading,
 } from '@/components/ui'
 import { AppSidebar, AppHeader, CreateProjectDialog } from '@/components/layout'
+import { ImportDialog } from '@/features/project/ImportDialog'
 import { formatDate } from '@/lib/utils'
 import type { Project } from '@/types'
 import { ProjectRepository } from '@/services/projectRepository'
@@ -27,6 +28,9 @@ export function ProjectsPage() {
 
   // Create dialog state
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+
+  // Import dialog state
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false)
 
   // Delete dialog state
   const [deleteTarget, setDeleteTarget] = useState<Project | null>(null)
@@ -117,13 +121,23 @@ export function ProjectsPage() {
               <div>
                 <h1 className="text-2xl font-bold text-primary">{t('projects.title')}</h1>
               </div>
-              <Button
-                onClick={() => setIsCreateDialogOpen(true)}
-                className="rounded-full bg-primary px-6 text-surface hover:bg-primary/90"
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                {t('projects.newProject')}
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  onClick={() => setIsImportDialogOpen(true)}
+                  variant="outline"
+                  className="rounded-full"
+                >
+                  <Upload className="mr-2 h-4 w-4" />
+                  {t('projects.importProject')}
+                </Button>
+                <Button
+                  onClick={() => setIsCreateDialogOpen(true)}
+                  className="rounded-full bg-primary px-6 text-surface hover:bg-primary/90"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  {t('projects.newProject')}
+                </Button>
+              </div>
             </div>
 
             {/* Projects Grid */}
@@ -232,6 +246,12 @@ export function ProjectsPage() {
       <CreateProjectDialog
         open={isCreateDialogOpen}
         onOpenChange={setIsCreateDialogOpen}
+      />
+
+      {/* Import Dialog */}
+      <ImportDialog
+        open={isImportDialogOpen}
+        onOpenChange={setIsImportDialogOpen}
       />
 
       {/* Rename Dialog */}

@@ -3,6 +3,7 @@
  */
 
 import i18n from '@/i18n'
+import type { Attachment, EngineType } from '@/types'
 
 // Maximum file sizes (in bytes)
 export const MAX_IMAGE_SIZE = 10 * 1024 * 1024 // 10MB
@@ -17,6 +18,31 @@ export const SUPPORTED_DOCUMENT_TYPES = [
 ]
 // 文件扩展名映射（用于处理某些浏览器不识别 MIME 类型的情况）
 export const SUPPORTED_DOCUMENT_EXTENSIONS = ['.docx', '.txt', '.md']
+
+/** 可导入的图表源码扩展名 → 引擎 */
+export const EXT_ENGINE_MAP: Record<string, EngineType> = {
+  '.mmd': 'mermaid',
+  '.mermaid': 'mermaid',
+  '.txt': 'mermaid',
+  '.excalidraw': 'excalidraw',
+  '.json': 'excalidraw',
+  '.drawio': 'drawio',
+  '.xml': 'drawio',
+}
+
+/** 引擎 → 导出文件扩展名 */
+export const EXPORT_EXT_MAP: Record<EngineType, string> = {
+  mermaid: '.mmd',
+  excalidraw: '.excalidraw',
+  drawio: '.drawio',
+}
+
+/** 可导入的图表源码扩展名列表 */
+export const IMPORTABLE_EXTENSIONS = Object.keys(EXT_ENGINE_MAP)
+
+/** Mermaid 图表类型关键字 */
+const MERMAID_KEYWORDS =
+  /^\s*(?:%%\{[\s\S]*?%%\s*)?(graph|flowchart|sequenceDiagram|classDiagram|stateDiagram|stateDiagram-v2|erDiagram|journey|gantt|pie|gitGraph|mindmap|timeline|quadrantChart|requirementDiagram|C4Context|C4Container|block-beta|architecture-beta|packet-beta|kanban|radar|treemap|sankey-beta|ZenUML)\b/m
 
 export interface FileValidationResult {
   valid: boolean
@@ -183,4 +209,99 @@ export function selectFiles(
     }
     input.click()
   })
+}
+
+/**
+ * 从剪贴板事件中提取文件（截图、复制的文件等）
+ */
+export function extractFilesFromClipboard(event: ClipboardEvent): File[] {
+  const items = event.clipboardData?.items
+  if (!items) return []
+
+  const files: File[] = []
+  for (const item of Array.from(items)) {
+    if (item.kind !== 'file') continue
+    const file = item.getAsFile()
+    if (file) files.push(file)
+  }
+  return files
+}
+
+/**
+ * 从剪贴板事件中提取纯文本
+ */
+export function extractTextFromClipboard(event: ClipboardEvent): string {
+  return event.clipboardData?.getData('text/plain') || ''
+}
+
+/**
+ * 把上传/粘贴的文件转换成可发送给模型的附件
+ */
+export async function toAttachment(
+  file: File
+): Promise<{ attachment?: Attachment; error?: string }> {
+  if (SUPPORTED_IMAGE_TYPES.includes(file.type)) {
+    const validation = validateImageFile(file)
+    if (!validation.valid) return { error: validation.error }
+    return {
+      attachment: {
+        type: 'image',
+        dataUrl: await fileToBase64(file),
+        fileName: file.name || `pasted-image-${Date.now()}.png`,
+      },
+    }
+  }
+
+  const extension = getFileExtension(file.name)
+  if (
+    SUPPORTED_DOCUMENT_TYPES.includes(file.type) ||
+    SUPPORTED_DOCUMENT_EXTENSIONS.includes(extension)
+  ) {
+    const validation = validateDocumentFile(file)
+    if (!validation.valid) return { error: validation.error }
+    return {
+      attachment: {
+        type: 'document',
+        content: await parseDocument(file),
+        fileName: file.name,
+      },
+    }
+  }
+
+  return { error: i18n.t('errors.unsupportedFileType', { type: file.type || extension }) }
+}
+
+/**
+ * 根据文件名后缀推断图表引擎
+ */
+export function detectEngineFromFileName(fileName: string): EngineType | null {
+  return EXT_ENGINE_MAP[getFileExtension(fileName)] ?? null
+}
+
+/**
+ * 判断一段文本是否像图表源码，并返回对应引擎
+ */
+export function looksLikeDiagramSource(text: string): EngineType | null {
+  const trimmed = text.trim()
+  if (!trimmed) return null
+
+  if (trimmed.includes('<mxGraphModel') || trimmed.includes('<mxfile')) {
+    return 'drawio'
+  }
+
+  if (MERMAID_KEYWORDS.test(trimmed)) {
+    return 'mermaid'
+  }
+
+  if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+    try {
+      const parsed = JSON.parse(trimmed)
+      const elements = Array.isArray(parsed) ? parsed : parsed?.elements
+      if (Array.isArray(elements)) return 'excalidraw'
+    } catch {
+      // 不是合法 JSON，继续按普通文本处理
+    }
+  }
+
+  return null
 }

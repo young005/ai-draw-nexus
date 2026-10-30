@@ -95,7 +95,6 @@ export function useAIGenerate() {
     currentContent,
     setContentFromVersion,
     setLoading,
-    thumbnailGetter,
     setProject,
   } = useEditorStore()
 

@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import i18n from '@/i18n'
 
 export interface ToastMessage {
   id: string
@@ -48,10 +49,10 @@ export function useToast() {
       addToast(options)
     },
     success: (description: string) => {
-      addToast({ title: 'Success', description, variant: 'default' })
+      addToast({ title: i18n.t('toast.successTitle'), description, variant: 'default' })
     },
     error: (description: string) => {
-      addToast({ title: 'Error', description, variant: 'destructive' })
+      addToast({ title: i18n.t('toast.errorTitle'), description, variant: 'destructive' })
     },
   }
 }
