@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Send, ImagePlus, FileText, User, Bot, X, MessageSquarePlus, Loader2, CheckCircle2, Link,MoveRight } from 'lucide-react'
 import { Button, Loading } from '@/components/ui'
 import { useChatStore } from '@/stores/chatStore'
@@ -18,6 +19,7 @@ import {
 import type { Attachment, ImageAttachment, DocumentAttachment, UrlAttachment } from '@/types'
 
 export function ChatPanel() {
+  const { t } = useTranslation()
   const [inputValue, setInputValue] = useState('')
   const [attachments, setAttachments] = useState<Attachment[]>([])
   const [isProcessingFile, setIsProcessingFile] = useState(false)
@@ -77,7 +79,7 @@ export function ChatPanel() {
       }
       setAttachments((prev) => [...prev, imageAttachment])
     } catch (err) {
-      showError('图片处理失败')
+      showError(t('chat.imageProcessFailed'))
       console.error(err)
     } finally {
       setIsProcessingFile(false)
@@ -105,7 +107,7 @@ export function ChatPanel() {
       }
       setAttachments((prev) => [...prev, docAttachment])
     } catch (err) {
-      showError('文档处理失败')
+      showError(t('chat.documentProcessFailed'))
       console.error(err)
     } finally {
       setIsProcessingFile(false)
@@ -135,7 +137,7 @@ export function ChatPanel() {
         setShowUrlInput(false)
       }
     } catch (err) {
-      showError(err instanceof Error ? err.message : '链接解析失败')
+      showError(err instanceof Error ? err.message : t('chat.parseUrlFailed'))
       console.error(err)
     } finally {
       setIsParsingUrl(false)
@@ -163,15 +165,15 @@ export function ChatPanel() {
   const getStatusDisplay = (status: string) => {
     switch (status) {
       case 'pending':
-        return { text: '等待中...', icon: <Loader2 className="h-4 w-4 animate-spin" /> }
+        return { text: t('chat.pending'), icon: <Loader2 className="h-4 w-4 animate-spin" /> }
       case 'streaming':
-        return { text: '绘制中...', icon: <Loader2 className="h-4 w-4 animate-spin" /> }
+        return { text: t('chat.streaming'), icon: <Loader2 className="h-4 w-4 animate-spin" /> }
       case 'complete':
-        return { text: '绘制完成', icon: <CheckCircle2 className="h-4 w-4 text-green-500" /> }
+        return { text: t('chat.complete'), icon: <CheckCircle2 className="h-4 w-4 text-green-500" /> }
       case 'error':
-        return { text: '出错了', icon: <X className="h-4 w-4 text-red-500" /> }
+        return { text: t('chat.error'), icon: <X className="h-4 w-4 text-red-500" /> }
       default:
-        return { text: '处理中...', icon: <Loader2 className="h-4 w-4 animate-spin" /> }
+        return { text: t('chat.fallbackStatus'), icon: <Loader2 className="h-4 w-4 animate-spin" /> }
     }
   }
 
@@ -180,15 +182,15 @@ export function ChatPanel() {
       {/* Header */}
       <div className="flex items-center justify-between border-b border-border px-4 py-1">
         <div>
-          <h2 className="font-medium text-primary">AI 助手</h2>
+          <h2 className="font-medium text-primary">{t('chat.title')}</h2>
           <p className="text-xs text-muted">
-            {isCanvasEmpty ? '新建图表' : '基于当前图表修改'}
+            {isCanvasEmpty ? t('chat.modeNew') : t('chat.modeEdit')}
           </p>
         </div>
         <Button
           variant="ghost"
           size="icon"
-          title="新建对话"
+          title={t('chat.newConversation')}
           onClick={clearMessages}
           disabled={isStreaming || messages.length === 0}
         >
@@ -202,7 +204,7 @@ export function ChatPanel() {
           <div className="flex h-full flex-col items-center justify-center text-center text-muted">
             <Bot className="mb-4 h-12 w-12 opacity-50" />
             <p className="text-sm">
-              描述你的需求
+              {t('chat.emptyHint')}
             </p>
           </div>
         ) : (
@@ -329,7 +331,7 @@ export function ChatPanel() {
           {/* Textarea */}
           <textarea
             ref={textareaRef}
-            placeholder="输入你的消息..."
+            placeholder={t('chat.inputPlaceholder')}
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -344,7 +346,7 @@ export function ChatPanel() {
             <div className="absolute left-0 right-0 bottom-40 flex items-center gap-2 z-10 bg-background p-2 rounded border border-border shadow-md">
               <input
                 type="url"
-                placeholder="输入网址链接..."
+                placeholder={t('home.urlPlaceholder')}
                 value={urlInputValue}
                 onChange={(e) => setUrlInputValue(e.target.value)}
                 onKeyDown={(e) => {
@@ -389,7 +391,7 @@ export function ChatPanel() {
               <Button
                 variant="ghost"
                 size="icon"
-                title="上传图片"
+                title={t('chat.uploadImage')}
                 onClick={handleImageUpload}
                 disabled={isStreaming || isProcessingFile}
                 className="h-8 w-8"
@@ -399,7 +401,7 @@ export function ChatPanel() {
               <Button
                 variant="ghost"
                 size="icon"
-                title="上传文档 (docx, txt, md)"
+                title={t('chat.uploadDocument')}
                 onClick={handleDocumentUpload}
                 disabled={isStreaming || isProcessingFile}
                 className="h-8 w-8"
@@ -409,7 +411,7 @@ export function ChatPanel() {
               <Button
                 variant="ghost"
                 size="icon"
-                title="添加网址链接"
+                title={t('chat.addUrl')}
                 onClick={() => setShowUrlInput(!showUrlInput)}
                 disabled={isStreaming || isProcessingFile || isParsingUrl}
                 className="h-8 w-8"
@@ -419,13 +421,13 @@ export function ChatPanel() {
               {isProcessingFile && (
                 <span className="flex items-center text-xs text-muted ml-2">
                   <Loading size="sm" className="mr-1" />
-                  处理中...
+                  {t('chat.processing')}
                 </span>
               )}
               {isParsingUrl && (
                 <span className="flex items-center text-xs text-muted ml-2">
                   <Loading size="sm" className="mr-1" />
-                  解析链接中...
+                  {t('chat.parsingUrl')}
                 </span>
               )}
             </div>

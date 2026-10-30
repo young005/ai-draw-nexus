@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { RotateCcw, Clock,ArrowRightToLine } from 'lucide-react'
 import { Button, Loading } from '@/components/ui'
 import { useEditorStore } from '@/stores/editorStore'
@@ -6,6 +7,7 @@ import { VersionRepository } from '@/services/versionRepository'
 import type { VersionHistory } from '@/types'
 
 export function VersionPanel() {
+  const { t } = useTranslation()
   const [versions, setVersions] = useState<VersionHistory[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -54,9 +56,9 @@ export function VersionPanel() {
       <div className="flex justify-between items-center border-b border-border px-4 py-3">
         <div className="flex items-center gap-2">
         <ArrowRightToLine className="h-4 w-4" />
-        <h2 className="font-medium text-primary">版本历史</h2>
+        <h2 className="font-medium text-primary">{t('versionPanel.title')}</h2>
         </div>
-        <p className="text-xs text-muted">{versions.length} 个版本</p>
+        <p className="text-xs text-muted">{t('versionPanel.count', { count: versions.length })}</p>
       </div>
 
       {/* Version List */}
@@ -68,7 +70,7 @@ export function VersionPanel() {
         ) : versions.length === 0 ? (
           <div className="flex h-32 flex-col items-center justify-center text-muted">
             <Clock className="mb-2 h-8 w-8 opacity-50" />
-            <p className="text-sm">没有版本记录</p>
+            <p className="text-sm">{t('versionPanel.empty')}</p>
           </div>
         ) : (
           <div className="space-y-1 p-2">
@@ -84,7 +86,7 @@ export function VersionPanel() {
               >
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">
-                    {index === 0 ? '当前版本' : `v${versions.length - index}`}
+                    {index === 0 ? t('versionPanel.current') : `v${versions.length - index}`}
                   </span>
                   <Button
                     variant="ghost"

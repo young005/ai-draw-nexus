@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHandle } from 'react'
+import { useTranslation } from 'react-i18next'
 import mermaid from 'mermaid'
 import elkLayouts from '@mermaid-js/layout-elk'
 import tidyTreeLayouts from '@mermaid-js/layout-tidy-tree'
@@ -57,11 +58,11 @@ export interface MermaidRendererRef {
 type LayoutEngine = 'dagre' | 'elk' | 'tidy-tree'
 type Direction = 'TB' | 'BT' | 'LR' | 'RL'
 
-const DIRECTION_LABELS: Record<Direction, string> = {
-  TB: '从上到下',
-  BT: '从下到上',
-  LR: '从左到右',
-  RL: '从右到左',
+const DIRECTION_LABEL_KEYS: Record<Direction, string> = {
+  TB: 'mermaidRenderer.directionTB',
+  BT: 'mermaidRenderer.directionBT',
+  LR: 'mermaidRenderer.directionLR',
+  RL: 'mermaidRenderer.directionRL',
 }
 
 const DIRECTION_ICONS: Record<Direction, typeof ArrowDown> = {
@@ -94,6 +95,7 @@ async function registerTidyTreeLayouts() {
 }
 
 export const MermaidRenderer = forwardRef<MermaidRendererRef, MermaidRendererProps>(function MermaidRenderer({ code, className }, ref) {
+  const { t } = useTranslation()
   const containerRef = useRef<HTMLDivElement>(null)
   const svgContainerRef = useRef<HTMLDivElement>(null)
   const diagramContainerRef = useRef<HTMLDivElement>(null)
@@ -572,13 +574,13 @@ export const MermaidRenderer = forwardRef<MermaidRendererRef, MermaidRendererPro
                   </Button>
                 </DropdownMenuTrigger>
               </TooltipTrigger>
-              <TooltipContent>布局引擎</TooltipContent>
+              <TooltipContent>{t('mermaidRenderer.layoutEngine')}</TooltipContent>
             </Tooltip>
             <DropdownMenuContent>
               <DropdownMenuRadioGroup value={layout} onValueChange={handleLayoutChange}>
-                <DropdownMenuRadioItem value="dagre">Dagre (默认)</DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="elk">ELK (层次化)</DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="tidy-tree">Tidy Tree (思维导图专用)</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="dagre">{t('mermaidRenderer.layoutDagre')}</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="elk">{t('mermaidRenderer.layoutElk')}</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="tidy-tree">{t('mermaidRenderer.layoutTidyTree')}</DropdownMenuRadioItem>
               </DropdownMenuRadioGroup>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -590,29 +592,29 @@ export const MermaidRenderer = forwardRef<MermaidRendererRef, MermaidRendererPro
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="sm" className="gap-1.5">
                     <DirectionIcon className="h-4 w-4" />
-                    <span className="text-xs">{DIRECTION_LABELS[direction]}</span>
+                    <span className="text-xs">{t(DIRECTION_LABEL_KEYS[direction])}</span>
                   </Button>
                 </DropdownMenuTrigger>
               </TooltipTrigger>
-              <TooltipContent>图表方向</TooltipContent>
+              <TooltipContent>{t('mermaidRenderer.direction')}</TooltipContent>
             </Tooltip>
             <DropdownMenuContent>
               <DropdownMenuRadioGroup value={direction} onValueChange={handleDirectionChange}>
                 <DropdownMenuRadioItem value="TB">
                   <ArrowDown className="mr-2 h-4 w-4" />
-                  从上到下
+                  {t('mermaidRenderer.directionTB')}
                 </DropdownMenuRadioItem>
                 <DropdownMenuRadioItem value="BT">
                   <ArrowUp className="mr-2 h-4 w-4" />
-                  从下到上
+                  {t('mermaidRenderer.directionBT')}
                 </DropdownMenuRadioItem>
                 <DropdownMenuRadioItem value="LR">
                   <ArrowRight className="mr-2 h-4 w-4" />
-                  从左到右
+                  {t('mermaidRenderer.directionLR')}
                 </DropdownMenuRadioItem>
                 <DropdownMenuRadioItem value="RL">
                   <ArrowLeft className="mr-2 h-4 w-4" />
-                  从右到左
+                  {t('mermaidRenderer.directionRL')}
                 </DropdownMenuRadioItem>
               </DropdownMenuRadioGroup>
             </DropdownMenuContent>
@@ -627,7 +629,7 @@ export const MermaidRenderer = forwardRef<MermaidRendererRef, MermaidRendererPro
                 <ZoomOut className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>缩小</TooltipContent>
+            <TooltipContent>{t('mermaidRenderer.zoomOut')}</TooltipContent>
           </Tooltip>
 
           <span className="min-w-[3rem] text-center text-xs text-muted">
@@ -640,7 +642,7 @@ export const MermaidRenderer = forwardRef<MermaidRendererRef, MermaidRendererPro
                 <ZoomIn className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>放大</TooltipContent>
+            <TooltipContent>{t('mermaidRenderer.zoomIn')}</TooltipContent>
           </Tooltip>
 
           <Tooltip>
@@ -649,7 +651,7 @@ export const MermaidRenderer = forwardRef<MermaidRendererRef, MermaidRendererPro
                 <RotateCcw className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>重置视图</TooltipContent>
+            <TooltipContent>{t('mermaidRenderer.resetView')}</TooltipContent>
           </Tooltip>
 
 
@@ -683,7 +685,7 @@ export const MermaidRenderer = forwardRef<MermaidRendererRef, MermaidRendererPro
           "absolute bottom-2 right-2 text-xs text-muted opacity-60",
           showCodePanel && "right-[340px]"
         )}>
-          滚轮滚动 | Ctrl+滚轮缩放 | 拖拽平移
+          {t('mermaidRenderer.zoomHint')}
         </div>
 
         {/* Code Panel */}
@@ -692,9 +694,9 @@ export const MermaidRenderer = forwardRef<MermaidRendererRef, MermaidRendererPro
             {/* Panel Header */}
             <div className="flex items-center justify-between border-b border-border px-3 py-2">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium">Mermaid 源码</span>
+                <span className="text-sm font-medium">{t('mermaidRenderer.sourceTitle')}</span>
                 {hasChanges && (
-                  <span className="text-xs text-amber-500">• 未保存</span>
+                  <span className="text-xs text-amber-500">{t('sourceCodePanel.unsaved')}</span>
                 )}
               </div>
               <div className="flex items-center gap-1">
@@ -713,7 +715,7 @@ export const MermaidRenderer = forwardRef<MermaidRendererRef, MermaidRendererPro
                       )}
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>{copied ? '已复制' : '复制代码'}</TooltipContent>
+                  <TooltipContent>{copied ? t('sourceCodePanel.copied') : t('sourceCodePanel.copyCode')}</TooltipContent>
                 </Tooltip>
                 <Button
                   variant="ghost"
@@ -761,10 +763,10 @@ export const MermaidRenderer = forwardRef<MermaidRendererRef, MermaidRendererPro
                     className="gap-1.5"
                   >
                     <Undo2 className="h-3.5 w-3.5" />
-                    <span className="text-xs">重置</span>
+                    <span className="text-xs">{t('sourceCodePanel.reset')}</span>
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>重置为原始代码</TooltipContent>
+                <TooltipContent>{t('sourceCodePanel.resetTooltip')}</TooltipContent>
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -776,10 +778,10 @@ export const MermaidRenderer = forwardRef<MermaidRendererRef, MermaidRendererPro
                     className="gap-1.5"
                   >
                     <Play className="h-3.5 w-3.5" />
-                    <span className="text-xs">应用</span>
+                    <span className="text-xs">{t('sourceCodePanel.apply')}</span>
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>应用代码更改</TooltipContent>
+                <TooltipContent>{t('sourceCodePanel.applyTooltip')}</TooltipContent>
               </Tooltip>
             </div>
           </div>

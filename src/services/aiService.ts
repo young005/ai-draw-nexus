@@ -1,5 +1,6 @@
 import type { PayloadMessage, ChatRequest } from '@/types'
 import { quotaService } from './quotaService'
+import i18n from '@/i18n'
 
 // API endpoint - can be configured via environment variable
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
@@ -34,7 +35,7 @@ function checkAndConsumeQuota(response: Response): void {
  */
 function ensureQuotaAvailable(): void {
   if (!quotaService.hasAccessPassword() && !quotaService.hasQuotaRemaining()) {
-    throw new Error('今日配额已用完，请明天再试或设置访问密码')
+    throw new Error(i18n.t('errors.quotaExceeded'))
   }
 }
 
@@ -206,7 +207,7 @@ export const aiService = {
     const data: ParseUrlResponse = await response.json()
 
     if (!response.ok || !data.success) {
-      throw new Error(data.error || '解析URL失败')
+      throw new Error(data.error || i18n.t('errors.parseUrlFailed'))
     }
 
     return data

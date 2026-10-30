@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { AppSidebar, AppHeader } from '@/components/layout'
 import { Button, Input } from '@/components/ui'
 import { quotaService } from '@/services/quotaService'
@@ -7,6 +8,7 @@ import { Settings, Eye, EyeOff, MessageCircle } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 export function ProfilePage() {
+  const { t } = useTranslation()
   const [activeTab] = useState('settings')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -24,17 +26,17 @@ export function ProfilePage() {
 
   const handleSavePassword = () => {
     if (!password.trim()) {
-      showError('请输入访问密码')
+      showError(t('profile.passwordRequired'))
       return
     }
     quotaService.setAccessPassword(password.trim())
-    success('访问密码已保存')
+    success(t('profile.passwordSaved'))
   }
 
   const handleResetPassword = () => {
     quotaService.clearAccessPassword()
     setPassword('')
-    success('访问密码已清除')
+    success(t('profile.passwordCleared'))
   }
 
   const quotaPercentage = Math.min(100, (quotaUsed / quotaTotal) * 100)
@@ -59,14 +61,14 @@ export function ProfilePage() {
                     }`}
                   >
                     <Settings className="h-4 w-4" />
-                    <span>设置</span>
+                    <span>{t('profile.settings')}</span>
                   </button>
                 </nav>
               </div>
 
               {/* 右侧内容区 */}
               <div className="flex-1 p-6">
-                <h2 className="mb-6 text-lg font-medium text-primary">设置</h2>
+                <h2 className="mb-6 text-lg font-medium text-primary">{t('profile.settings')}</h2>
 
                 {/* 每日配额 */}
                 <QuotaSection
@@ -105,9 +107,11 @@ interface QuotaSectionProps {
 }
 
 function QuotaSection({ quotaUsed, quotaTotal, quotaPercentage, hasPassword }: QuotaSectionProps) {
+  const { t } = useTranslation()
+
   return (
     <div>
-      <h3 className="mb-3 text-sm font-medium text-primary">每日配额</h3>
+      <h3 className="mb-3 text-sm font-medium text-primary">{t('profile.dailyQuota')}</h3>
       <div className="space-y-3">
         {/* 进度条 */}
         <div className="h-2 w-full overflow-hidden rounded-full bg-background">
@@ -119,11 +123,11 @@ function QuotaSection({ quotaUsed, quotaTotal, quotaPercentage, hasPassword }: Q
         {/* 配额信息 */}
         <div className="flex items-center justify-between text-sm">
           <span className="text-muted">
-            已使用 <span className="font-medium text-primary">{quotaUsed}</span> / {quotaTotal} 次
+            {t('profile.quotaUsed', { used: quotaUsed, total: quotaTotal })}
           </span>
           {hasPassword && (
-            <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700 dark:bg-green-900 dark:text-green-300">
-              无限制
+            <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">
+              {t('profile.quotaUnlimited')}
             </span>
           )}
         </div>
@@ -149,16 +153,18 @@ function PasswordSection({
   onSave,
   onReset,
 }: PasswordSectionProps) {
+  const { t } = useTranslation()
+
   return (
     <div>
-      <h3 className="mb-3 text-sm font-medium text-primary">访问密码</h3>
+      <h3 className="mb-3 text-sm font-medium text-primary">{t('profile.accessPassword')}</h3>
       <div className="space-y-3">
         <div className="relative">
           <Input
             type={showPassword ? 'text' : 'password'}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="输入访问密码"
+            placeholder={t('profile.passwordPlaceholder')}
             className="pr-10"
           />
           <button
@@ -170,21 +176,21 @@ function PasswordSection({
           </button>
         </div>
         <p className="text-xs text-muted">
-          输入正确的访问密码后，可无限制使用 AI 功能，不消耗每日配额。
+          {t('profile.passwordHint')}
         </p>
         <Link
           to="/about"
           className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
         >
           <MessageCircle className="h-3 w-3" />
-          <span>进群可获得访问密码</span>
+          <span>{t('profile.sponsorLink')}</span>
         </Link>
         <div className="flex gap-2">
           <Button size="sm" onClick={onSave}>
-            保存
+            {t('common.save')}
           </Button>
           <Button size="sm" variant="outline" onClick={onReset}>
-            重置
+            {t('common.reset')}
           </Button>
         </div>
       </div>

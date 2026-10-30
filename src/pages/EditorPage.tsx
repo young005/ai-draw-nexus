@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { Menu, History, Pencil, Check, X, Plus, FolderOpen, Home, Save, Download, Image, Code, FileText } from 'lucide-react'
 import { Button, Input, Loading } from '@/components/ui'
 import { ChatPanel } from '@/features/chat/ChatPanel'
@@ -25,6 +26,7 @@ import {
 } from '@/components/ui/Tooltip'
 
 export function EditorPage() {
+  const { t } = useTranslation()
   const { projectId } = useParams<{ projectId: string }>()
   const navigate = useNavigate()
   const [isVersionPanelOpen, setIsVersionPanelOpen] = useState(false)
@@ -160,7 +162,7 @@ export function EditorPage() {
       await VersionRepository.create({
         projectId: currentProject.id,
         content: currentContent,
-        changeSummary: '人工调整',
+        changeSummary: t('editor.changeSummaryManual'),
       })
       markAsSaved()
 
@@ -176,7 +178,7 @@ export function EditorPage() {
         }
       }
 
-      success('版本已保存')
+      success(t('editor.versionSaved'))
     } catch (error) {
       console.error('Failed to save version:', error)
     }
@@ -207,21 +209,21 @@ export function EditorPage() {
                   onClick={handleNewProject}
                 >
                   <Plus className="h-4 w-4" />
-                  新建项目
+                  {t('editor.newProject')}
                 </button>
                 <button
                   className="flex w-full items-center gap-2 px-3 py-2 text-sm text-primary hover:bg-muted/50"
                   onClick={handleProjectManagement}
                 >
                   <FolderOpen className="h-4 w-4" />
-                  项目管理
+                  {t('editor.projectManagement')}
                 </button>
                 <button
                   className="flex w-full items-center gap-2 px-3 py-2 text-sm text-primary hover:bg-muted/50"
                   onClick={handleGoHome}
                 >
                   <Home className="h-4 w-4" />
-                  首页
+                  {t('editor.home')}
                 </button>
               </div>
             )}
@@ -256,8 +258,8 @@ export function EditorPage() {
                 </Button>
                 <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
                     currentProject.engineType === 'excalidraw'
-                      ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
-                      : 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300'
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'bg-purple-100 text-purple-700'
                   }`}>
                   {currentProject.engineType.toUpperCase()}
                 </span>
@@ -274,25 +276,25 @@ export function EditorPage() {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="sm" className="gap-1.5">
                     <Download className="h-4 w-4" />
-                    <span className="text-xs">导出</span>
+                    <span className="text-xs">{t('editor.export')}</span>
                   </Button>
                 </DropdownMenuTrigger>
               </TooltipTrigger>
-              <TooltipContent>导出图表</TooltipContent>
+              <TooltipContent>{t('editor.exportTooltip')}</TooltipContent>
             </Tooltip>
             <DropdownMenuContent>
               <DropdownMenuRadioGroup>
                 <DropdownMenuRadioItem className='pl-2' value="svg" onClick={() => canvasRef.current?.exportAsSvg()}>
                   <Code className="mr-2 h-4 w-4" />
-                  导出为 SVG
+                  {t('editor.exportSvg')}
                 </DropdownMenuRadioItem>
                 <DropdownMenuRadioItem className='pl-2' value="png" onClick={() => canvasRef.current?.exportAsPng()}>
                   <Image className="mr-2 h-4 w-4" />
-                  导出为 PNG
+                  {t('editor.exportPng')}
                 </DropdownMenuRadioItem>
                 <DropdownMenuRadioItem className='pl-2' value="source" onClick={() => canvasRef.current?.exportAsSource()}>
                   <FileText className="mr-2 h-4 w-4" />
-                  导出原文件
+                  {t('editor.exportSource')}
                 </DropdownMenuRadioItem>
               </DropdownMenuRadioGroup>
             </DropdownMenuContent>
@@ -308,10 +310,10 @@ export function EditorPage() {
                 className="gap-1.5"
               >
                 <Code className="h-4 w-4" />
-                <span className="text-xs">源码</span>
+                <span className="text-xs">{t('editor.source')}</span>
               </Button>
             </TooltipTrigger>
-            <TooltipContent>查看源码</TooltipContent>
+            <TooltipContent>{t('editor.sourceTooltip')}</TooltipContent>
           </Tooltip>
 
           <div className="mx-1 h-4 w-px bg-border" />
@@ -323,7 +325,7 @@ export function EditorPage() {
             disabled={!hasUnsavedChanges}
           >
             <Save className="mr-2 h-4 w-4" />
-            保存
+            {t('editor.save')}
           </Button>
           <Button
             variant="ghost"
@@ -331,7 +333,7 @@ export function EditorPage() {
             onClick={() => setIsVersionPanelOpen(!isVersionPanelOpen)}
           >
             <History className="mr-2 h-4 w-4" />
-            历史版本
+            {t('editor.history')}
           </Button>
         </div>
       </header>

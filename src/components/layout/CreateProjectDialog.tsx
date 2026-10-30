@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import {
   Button,
   Input,
@@ -10,33 +11,9 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui'
-import { ENGINES } from '@/constants'
+import { getEngines } from '@/constants'
 import { ProjectRepository } from '@/services/projectRepository'
 import type { EngineType } from '@/types'
-
-const ENGINE_TIPS: Record<EngineType, { title: string; features: string[] }> = {
-  mermaid: {
-    title: 'Mermaid',
-    features: [
-      '基于文本的图表生成，使用简洁的语法,适合快速绘制结构化图表',
-      '支持流程图、时序图、甘特图、ER图等多种图表,可直接嵌入 Markdown',
-    ],
-  },
-  excalidraw: {
-    title: 'Excalidraw',
-    features: [
-      '风格精美的手绘风格的白板工具，界面简洁直观',
-      '自由绘制，支持形状、箭头、文本等元素',
-    ],
-  },
-  drawio: {
-    title: 'Draw.io',
-    features: [
-      '专业级图表编辑器，功能丰富,内置大量模板和图形库',
-      '支持 UML、网络拓扑、流程图等专业图表,适合绘制复杂、精细的技术文档图表',
-    ],
-  },
-}
 
 interface CreateProjectDialogProps {
   open: boolean
@@ -44,10 +21,13 @@ interface CreateProjectDialogProps {
 }
 
 export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogProps) {
+  const { t } = useTranslation()
   const navigate = useNavigate()
-  const [title, setTitle] = useState('未命名')
+  const [title, setTitle] = useState(t('common.untitledPrefixZh'))
   const [engine, setEngine] = useState<EngineType>('mermaid')
   const [isCreating, setIsCreating] = useState(false)
+
+  const engines = getEngines(t)
 
   const handleCreate = async () => {
     if (!title.trim()) return
@@ -59,7 +39,7 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
         engineType: engine,
       })
       onOpenChange(false)
-      setTitle('未命名')
+      setTitle(t('common.untitledPrefixZh'))
       navigate(`/editor/${project.id}`)
     } catch (error) {
       console.error('Failed to create project:', error)
@@ -70,7 +50,7 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
 
   const handleOpenChange = (newOpen: boolean) => {
     if (!newOpen) {
-      setTitle('未命名')
+      setTitle(t('common.untitledPrefixZh'))
       setEngine('mermaid')
     }
     onOpenChange(newOpen)
@@ -80,22 +60,22 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="rounded-2xl">
         <DialogHeader>
-          <DialogTitle>新建项目</DialogTitle>
+          <DialogTitle>{t('createDialog.title')}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div>
-            <label className="mb-2 block text-sm font-medium">项目名称</label>
+            <label className="mb-2 block text-sm font-medium">{t('createDialog.nameLabel')}</label>
             <Input
-              placeholder="请输入项目名称"
+              placeholder={t('createDialog.namePlaceholder')}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               className="rounded-xl"
             />
           </div>
           <div>
-            <label className="mb-2 block text-sm font-medium">引擎</label>
+            <label className="mb-2 block text-sm font-medium">{t('createDialog.engineLabel')}</label>
             <div className="flex gap-2">
-              {ENGINES.map((e) => (
+              {engines.map((e) => (
                 <button
                   key={e.value}
                   onClick={() => setEngine(e.value)}
@@ -114,15 +94,17 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
           <div className="rounded-xl bg-muted/50 p-3">
             <div className="mb-2 flex items-center gap-2 text-sm font-medium text-primary">
               <span>💡</span>
-              <span>{ENGINE_TIPS[engine].title} 特点</span>
+              <span>{t('createDialog.tipsTitle', { engine: engines.find((e) => e.value === engine)?.label ?? engine })}</span>
             </div>
             <ul className="space-y-1 text-xs text-muted-foreground">
-              {ENGINE_TIPS[engine].features.map((feature, index) => (
-                <li key={index} className="flex items-start gap-2">
-                  <span className="mt-0.5 text-primary">•</span>
-                  <span>{feature}</span>
-                </li>
-              ))}
+              <li className="flex items-start gap-2">
+                <span className="mt-0.5 text-primary">•</span>
+                <span>{t(`engines.${engine}.feature1`)}</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="mt-0.5 text-primary">•</span>
+                <span>{t(`engines.${engine}.feature2`)}</span>
+              </li>
             </ul>
           </div>
         </div>
@@ -132,14 +114,14 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
             onClick={() => onOpenChange(false)}
             className="rounded-full"
           >
-            取消
+            {t('common.cancel')}
           </Button>
           <Button
             onClick={handleCreate}
             disabled={isCreating}
             className="rounded-full bg-primary text-surface hover:bg-primary/90"
           >
-            {isCreating ? '创建中...' : '创建'}
+            {isCreating ? t('common.creating') : t('common.create')}
           </Button>
         </DialogFooter>
       </DialogContent>

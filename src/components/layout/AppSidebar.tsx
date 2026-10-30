@@ -1,12 +1,14 @@
 import { useNavigate, useLocation } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { Plus } from 'lucide-react'
-import { NAV_ITEMS } from '@/constants'
+import { getNavItems } from '@/constants'
 
 interface AppSidebarProps {
   onCreateProject?: () => void
 }
 
 export function AppSidebar({ onCreateProject }: AppSidebarProps) {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -25,7 +27,7 @@ export function AppSidebar({ onCreateProject }: AppSidebarProps) {
 
       {/* Navigation Items */}
       <nav className="flex flex-col items-center gap-1">
-        {NAV_ITEMS.map((item, index) => (
+        {getNavItems(t).map((item, index) => (
           <button
             key={index}
             onClick={() => navigate(item.path)}

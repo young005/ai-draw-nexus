@@ -1,4 +1,5 @@
 import { useCallback, useImperativeHandle, useRef, useState, forwardRef, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { DrawIoEmbed } from 'react-drawio'
 import type { DrawIoEmbedRef, EventExport, EventSave, EventAutoSave } from 'react-drawio'
 import { cn } from '@/lib/utils'
@@ -40,6 +41,7 @@ const DRAWIO_BASE_URL = import.meta.env.VITE_DRAWIO_BASE_URL || 'https://embed.d
 
 export const DrawioEditor = forwardRef<DrawioEditorRef, DrawioEditorProps>(
   function DrawioEditor({ data, onChange, onExport, className, darkMode: _darkMode = false, ui = 'min' }, ref) {
+    const { t } = useTranslation()
     const drawioRef = useRef<DrawIoEmbedRef | null>(null)
     const [isReady, setIsReady] = useState(false)
     const [showCodePanel, setShowCodePanel] = useState(false)
@@ -311,9 +313,9 @@ export const DrawioEditor = forwardRef<DrawioEditorRef, DrawioEditorProps>(
               {/* Panel Header */}
               <div className="flex items-center justify-between border-b border-border px-3 py-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium">Draw.io XML 源码</span>
+                  <span className="text-sm font-medium">{t('drawioEditor.sourceTitle')}</span>
                   {hasChanges && (
-                    <span className="text-xs text-amber-500">• 未保存</span>
+                    <span className="text-xs text-amber-500">{t('sourceCodePanel.unsaved')}</span>
                   )}
                 </div>
                 <div className="flex items-center gap-1">
@@ -332,7 +334,7 @@ export const DrawioEditor = forwardRef<DrawioEditorRef, DrawioEditorProps>(
                         )}
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>{copied ? '已复制' : '复制代码'}</TooltipContent>
+                    <TooltipContent>{copied ? t('sourceCodePanel.copied') : t('sourceCodePanel.copyCode')}</TooltipContent>
                   </Tooltip>
                   <Button
                     variant="ghost"
@@ -380,10 +382,10 @@ export const DrawioEditor = forwardRef<DrawioEditorRef, DrawioEditorProps>(
                       className="gap-1.5"
                     >
                       <Undo2 className="h-3.5 w-3.5" />
-                      <span className="text-xs">重置</span>
+                      <span className="text-xs">{t('sourceCodePanel.reset')}</span>
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>重置为原始代码</TooltipContent>
+                  <TooltipContent>{t('sourceCodePanel.resetTooltip')}</TooltipContent>
                 </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -395,10 +397,10 @@ export const DrawioEditor = forwardRef<DrawioEditorRef, DrawioEditorProps>(
                       className="gap-1.5"
                     >
                       <Play className="h-3.5 w-3.5" />
-                      <span className="text-xs">应用</span>
+                      <span className="text-xs">{t('sourceCodePanel.apply')}</span>
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>应用代码更改</TooltipContent>
+                  <TooltipContent>{t('sourceCodePanel.applyTooltip')}</TooltipContent>
                 </Tooltip>
               </div>
             </div>

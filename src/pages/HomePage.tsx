@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { Sparkles, Paperclip, ChevronDown, Plus, Send, Link, X, MoveRight } from 'lucide-react'
 import { Button, Loading } from '@/components/ui'
 import { AppSidebar, AppHeader, CreateProjectDialog } from '@/components/layout'
-import { ENGINES, QUICK_ACTIONS } from '@/constants'
+import { getEngines, getQuickActions } from '@/constants'
 import { formatDate } from '@/lib/utils'
 import type { EngineType, Project, UrlAttachment, Attachment, ImageAttachment, DocumentAttachment } from '@/types'
 import { ProjectRepository } from '@/services/projectRepository'
@@ -18,6 +19,7 @@ import {
 } from '@/lib/fileUtils'
 
 export function HomePage() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const [prompt, setPrompt] = useState('')
   const [selectedEngine, setSelectedEngine] = useState<EngineType>('mermaid')
@@ -65,7 +67,7 @@ export function HomePage() {
     setIsLoading(true)
     try {
       const project = await ProjectRepository.create({
-        title: `Untitled-${Date.now()}`,
+        title: `${t('common.untitledPrefix')}-${Date.now()}`,
         engineType: selectedEngine,
       })
 
@@ -113,7 +115,7 @@ export function HomePage() {
     }
   }
 
-  const handleQuickAction = async (action: (typeof QUICK_ACTIONS)[0]) => {
+  const handleQuickAction = async (action: ReturnType<typeof getQuickActions>[0]) => {
     setSelectedEngine(action.engine)
     setPrompt(action.prompt)
     // 自动聚焦到输入框
@@ -158,7 +160,7 @@ export function HomePage() {
         setShowUrlInput(false)
       }
     } catch (err) {
-      showError(err instanceof Error ? err.message : '链接解析失败')
+      showError(err instanceof Error ? err.message : t('chat.parseUrlFailed'))
       console.error(err)
     } finally {
       setIsParsingUrl(false)
@@ -197,10 +199,10 @@ export function HomePage() {
                 <Sparkles className="h-6 w-6 text-surface" />
               </div> */}
               <h1 className="text-3xl font-bold text-primary">
-                AI Draw Nexus 
+                {t('app.name')}
               </h1>
             </div>
-            <p className="text-muted">AI驱动的一站式绘图平台</p>
+            <p className="text-muted">{t('app.slogan')}</p>
           </div>
 
           {/* Chat Input Box */}
@@ -248,7 +250,7 @@ export function HomePage() {
 
               <textarea
                 ref={textareaRef}
-                placeholder="描述你想要绘制的图表，AI Draw Nexus 会帮你完成..."
+                placeholder={t('home.placeholder')}
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 onKeyDown={handleKeyDown}
@@ -274,12 +276,12 @@ export function HomePage() {
                   <button
                     onClick={handleAttachmentClick}
                     className="group relative flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-muted transition-colors hover:bg-background hover:text-primary"
-                    title="可上传文档一键转化为图表，或上传截图复刻图表"
+                    title={t('home.uploadAttachmentTip')}
                   >
                     <Paperclip className="h-4 w-4" />
-                    <span>上传附件</span>
+                    <span>{t('home.uploadAttachment')}</span>
                     <div className="pointer-events-none absolute bottom-full left-1/2 mb-2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-primary px-3 py-2 text-xs text-surface opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
-                      可上传文档一键转化为图表，或上传截图复刻图表
+                      {t('home.uploadAttachmentTip')}
                       <div className="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-primary"></div>
                     </div>
                   </button>
@@ -290,12 +292,12 @@ export function HomePage() {
                       onClick={() => setShowUrlInput(!showUrlInput)}
                       disabled={isParsingUrl}
                       className="group relative flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-muted transition-colors hover:bg-background hover:text-primary disabled:opacity-50"
-                      title="添加网页链接，AI将解析内容"
+                      title={t('home.addLinkTip')}
                     >
                       <Link className="h-4 w-4" />
-                      <span>添加链接</span>
+                      <span>{t('home.addLink')}</span>
                       <div className="pointer-events-none absolute bottom-full left-1/2 mb-2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-primary px-3 py-2 text-xs text-surface opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
-                        添加网页链接，AI将解析内容生成图表
+                        {t('home.addLinkTip')}
                         <div className="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-primary"></div>
                       </div>
                     </button>
@@ -305,7 +307,7 @@ export function HomePage() {
                       <div className="absolute bottom-full left-0 mb-2 flex items-center gap-2 rounded-lg border border-border bg-surface p-2 shadow-lg">
                         <input
                           type="url"
-                          placeholder="输入网址链接..."
+                          placeholder={t('home.urlPlaceholder')}
                           value={urlInputValue}
                           onChange={(e) => setUrlInputValue(e.target.value)}
                           onKeyDown={(e) => {
@@ -354,7 +356,7 @@ export function HomePage() {
                       }}
                       className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-muted transition-colors hover:bg-background hover:text-primary"
                     >
-                      <span>{ENGINES.find(e => e.value === selectedEngine)?.label}</span>
+                      <span>{getEngines(t).find(e => e.value === selectedEngine)?.label}</span>
                       <ChevronDown className="h-4 w-4" />
                     </button>
                     {showEngineDropdown && (
@@ -362,11 +364,11 @@ export function HomePage() {
                         className="absolute bottom-full left-0 mb-2 w-64 rounded-xl border border-border bg-surface py-1 shadow-lg"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        {ENGINES.map((engine) => {
+                        {getEngines(t).map((engine) => {
                           const descriptions: Record<string, string> = {
-                            mermaid: '简洁标准的图形绘制',
-                            excalidraw: '优雅干净的手绘风格',
-                            drawio: '专业而强大的绘图工具',
+                            mermaid: t('engines.mermaid.description'),
+                            excalidraw: t('engines.excalidraw.description'),
+                            drawio: t('engines.drawio.description'),
                           }
                           return (
                             <button
@@ -402,11 +404,11 @@ export function HomePage() {
                   className="flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm text-surface transition-colors hover:bg-primary/90 disabled:opacity-50"
                 >
                   {isLoading ? (
-                    <span>创建中...</span>
+                    <span>{t('home.creatingProject')}</span>
                   ) : (
                     <>
                       <Send className="h-4 w-4" />
-                      <span>发送</span>
+                      <span>{t('home.send')}</span>
                     </>
                   )}
                 </Button>
@@ -418,17 +420,17 @@ export function HomePage() {
           <div className="mb-12 w-full max-w-3xl">
             <p className="mb-4 text-center text-sm text-muted">
               <span className="inline-flex items-center gap-1.5">
-                支持：
-                <span>📄 上传文档，可视化阅读</span>
+                {t('home.supportTitle')}:
+                <span>📄 {t('home.supportDocs')}</span>
                 <span className="text-border">·</span>
-                <span>🖼️ 上传图片复刻图表</span>
+                <span>🖼️ {t('home.supportImage')}</span>
                 <span className="text-border">·</span>
-                <span>🔗 链接解析，快速解读网页</span>
+                <span>🔗 {t('home.supportUrl')}</span>
               </span>
             </p>
-            <p className="mb-4 text-left text-sm text-muted">试试这些用例，快速开始</p>
+            <p className="mb-4 text-left text-sm text-muted">{t('home.startersSubtitle')}</p>
             <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-              {QUICK_ACTIONS.map((action, index) => (
+              {getQuickActions(t).map((action, index) => (
                 <button
                   key={index}
                   onClick={() => handleQuickAction(action)}
@@ -446,7 +448,7 @@ export function HomePage() {
 
           {/* Recent Projects Section */}
           <div className="w-full max-w-6xl pb-12">
-            <h2 className="mb-4 text-lg font-medium text-primary">最近项目</h2>
+            <h2 className="mb-4 text-lg font-medium text-primary">{t('home.recentProjects')}</h2>
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
               {/* New Project Card */}
               <button
@@ -455,7 +457,7 @@ export function HomePage() {
                 style={{ height: 'calc(6rem + 68px)' }}
               >
                 <Plus className="mb-2 h-6 w-6 text-muted" />
-                <span className="text-sm text-muted">新建项目</span>
+                <span className="text-sm text-muted">{t('home.newProject')}</span>
               </button>
 
               {/* Recent Projects */}
@@ -480,21 +482,21 @@ export function HomePage() {
                     <div className="flex items-center gap-2">
                       <p className="truncate text-sm font-medium text-primary">
                         {project.title === `Untitled-${project.id}`
-                          ? '未命名'
+                          ? t('common.unnamed')
                           : project.title}
                       </p>
                       <span className={`flex-shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
                         project.engineType === 'excalidraw'
-                          ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+                          ? 'bg-blue-100 text-blue-700'
                           : project.engineType === 'drawio'
-                            ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
-                            : 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300'
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-purple-100 text-purple-700'
                       }`}>
                         {project.engineType.toUpperCase()}
                       </span>
                     </div>
                     <p className="text-xs text-muted">
-                      更新于 {formatDate(project.updatedAt)}
+                      {t('home.updatedAt', { date: formatDate(project.updatedAt) })}
                     </p>
                   </div>
                 </button>

@@ -13,6 +13,7 @@ import { generateThumbnail } from '@/lib/thumbnail'
 import { aiService } from '@/services/aiService'
 import { validateContent } from '@/lib/validators'
 import { useToast } from '@/hooks/useToast'
+import { useTranslation } from 'react-i18next'
 import type { PayloadMessage, EngineType, Attachment, ContentPart } from '@/types'
 
 // Enable streaming by default, can be configured
@@ -82,6 +83,7 @@ function buildMultimodalContent(
 }
 
 export function useAIGenerate() {
+  const { t } = useTranslation()
   const {
     addMessage,
     updateMessage,
@@ -172,7 +174,6 @@ export function useAIGenerate() {
       }
 
       // Validate the generated content with auto-fix for Mermaid
-      console.log('finalCode', finalCode)
       let validatedCode = finalCode
       let validation = await validateContent(validatedCode, engineType)
 
@@ -200,7 +201,7 @@ export function useAIGenerate() {
 
       // Update assistant message
       updateMessage(assistantMsgId, {
-        content: 'Diagram generated successfully.',
+        content: t('ai.generatedSuccess'),
         status: 'complete',
       })
 
@@ -208,7 +209,7 @@ export function useAIGenerate() {
       await VersionRepository.create({
         projectId: currentProject.id,
         content: finalCode,
-        changeSummary: isInitial ? '初始生成' : 'AI 修改',
+        changeSummary: isInitial ? t('ai.changeSummaryInitial') : t('ai.changeSummaryEdit'),
       })
 
       // Generate and save thumbnail
@@ -248,15 +249,15 @@ export function useAIGenerate() {
       // Update project timestamp
       await ProjectRepository.update(currentProject.id, {})
 
-      success('Diagram generated successfully')
+      success(t('ai.generatedSuccess'))
 
     } catch (error) {
       console.error('AI generation failed:', error)
       updateMessage(assistantMsgId, {
-        content: `Error: ${error instanceof Error ? error.message : 'Generation failed'}`,
+        content: `Error: ${error instanceof Error ? error.message : t('ai.generationFailed')}`,
         status: 'error',
       })
-      showError(error instanceof Error ? error.message : 'Generation failed')
+      showError(error instanceof Error ? error.message : t('ai.generationFailed'))
     } finally {
       setStreaming(false)
       setLoading(false)
@@ -275,7 +276,7 @@ export function useAIGenerate() {
   ): Promise<string> => {
     // Phase 1: Generate elements
     updateMessage(assistantMsgId, {
-      content: 'Phase 1/2: Generating elements...',
+      content: t('ai.phase1'),
       status: 'streaming',
     })
 
@@ -295,7 +296,7 @@ export function useAIGenerate() {
         phase1Messages,
         (_chunk, accumulated) => {
           updateMessage(assistantMsgId, {
-            content: `Phase 1/2: Generating elements...\n\n${accumulated}`,
+            content: `${t('ai.phase1')}\n\n${accumulated}`,
           })
         }
       )
@@ -307,7 +308,7 @@ export function useAIGenerate() {
 
     // Phase 2: Generate links/connections
     updateMessage(assistantMsgId, {
-      content: 'Phase 2/2: Generating connections...',
+      content: t('ai.phase2'),
       status: 'streaming',
     })
 
@@ -335,7 +336,7 @@ export function useAIGenerate() {
         phase2Messages,
         (_chunk, accumulated) => {
           updateMessage(assistantMsgId, {
-            content: `Phase 2/2: Generating connections...\n\n${accumulated}`,
+            content: `${t('ai.phase2')}\n\n${accumulated}`,
           })
         }
       )
@@ -357,7 +358,7 @@ export function useAIGenerate() {
     attachments?: Attachment[]
   ): Promise<string> => {
     updateMessage(assistantMsgId, {
-      content: 'Generating diagram...',
+      content: t('ai.generating'),
       status: 'streaming',
     })
 
@@ -376,7 +377,7 @@ export function useAIGenerate() {
         messages,
         (_chunk, accumulated) => {
           updateMessage(assistantMsgId, {
-            content: `Generating diagram...\n\n${accumulated}`,
+            content: `${t('ai.generating')}\n\n${accumulated}`,
           })
         }
       )
@@ -415,7 +416,7 @@ export function useAIGenerate() {
         messages,
         (_chunk, accumulated) => {
           updateMessage(assistantMsgId, {
-            content: `Modifying diagram...\n\n${accumulated}`,
+            content: `${t('ai.modifying')}\n\n${accumulated}`,
           })
         }
       )
@@ -443,13 +444,11 @@ export function useAIGenerate() {
       attempts++
 
       updateMessage(assistantMsgId, {
-        content: `修复报错 (尝试 ${attempts}/${MAX_MERMAID_FIX_ATTEMPTS})...\n错误: ${currentError}`,
+        content: t('ai.fixAttempt', { attempt: attempts, max: MAX_MERMAID_FIX_ATTEMPTS, error: currentError }),
         status: 'streaming',
       })
 
-      const fixPrompt = `请修复下面 Mermaid 代码中的错误，只返回修复后的代码。
-      报错："""${currentError}"""
-      当前代码："""${currentCode}"""`
+      const fixPrompt = t('ai.fixPrompt', { error: currentError, code: currentCode })
 
       const messages: PayloadMessage[] = [
         { role: 'system', content: systemPrompt },
@@ -464,7 +463,7 @@ export function useAIGenerate() {
           messages,
           (_chunk, accumulated) => {
             updateMessage(assistantMsgId, {
-              content: `修复报错 (尝试 ${attempts}/${MAX_MERMAID_FIX_ATTEMPTS})...\n\n${accumulated}`,
+              content: `${t('ai.fixAttempt', { attempt: attempts, max: MAX_MERMAID_FIX_ATTEMPTS, error: '' })}\n\n${accumulated}`,
             })
           }
         )

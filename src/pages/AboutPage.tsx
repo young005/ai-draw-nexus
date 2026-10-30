@@ -1,7 +1,10 @@
+import { useTranslation } from 'react-i18next'
 import { AppSidebar, AppHeader } from '@/components/layout'
 import { Github } from 'lucide-react'
 
 export function AboutPage() {
+  const { t } = useTranslation()
+
   return (
     <div className="flex min-h-screen bg-background">
       <AppSidebar />
@@ -13,10 +16,10 @@ export function AboutPage() {
             <section className="rounded-xl border border-border bg-surface p-6 shadow-sm">
               <h2 className="mb-4 flex items-center gap-2 text-lg font-medium text-primary">
                 <Github className="h-5 w-5" />
-                开源项目
+                {t('about.openSourceTitle')}
               </h2>
               <p className="text-sm leading-relaxed text-muted">
-                本项目的代码已全部开源至{' '}
+                {t('about.openSourceText')}
                 <a
                   href="https://github.com/liujuntao123/ai-draw-nexus"
                   target="_blank"
@@ -25,20 +28,20 @@ export function AboutPage() {
                 >
                   liujuntao123/ai-draw-nexus
                 </a>
-                。
+                {t('about.openSourceTail')}
               </p>
             </section>
 
             {/* 联系作者 */}
             <section className="rounded-xl border border-border bg-surface p-6 shadow-sm">
-              <h2 className="mb-4 text-lg font-medium text-primary">联系作者</h2>
+              <h2 className="mb-4 text-lg font-medium text-primary">{t('about.contactTitle')}</h2>
               <p className="mb-4 text-sm leading-relaxed text-muted">
-                如果你有任何的建议和想法，欢迎联系作者。
+                {t('about.contactText')}
               </p>
               <div className="flex justify-center">
                 <img
                   src="/contact.png"
-                  alt="联系作者"
+                  alt={t('about.contactAlt')}
                   className="max-w-xs rounded-lg border border-border"
                 />
               </div>
@@ -46,14 +49,14 @@ export function AboutPage() {
 
             {/* 赞助支持 */}
             <section className="rounded-xl border border-border bg-surface p-6 shadow-sm">
-              <h2 className="mb-4 text-lg font-medium text-primary">赞助支持</h2>
+              <h2 className="mb-4 text-lg font-medium text-primary">{t('about.sponsorTitle')}</h2>
               <p className="mb-4 text-sm leading-relaxed text-muted">
-                如果你认为本项目对你有帮助，欢迎请作者喝奶茶。
+                {t('about.sponsorText')}
               </p>
               <div className="flex justify-center">
                 <img
                   src="/donate.png"
-                  alt="请作者喝奶茶"
+                  alt={t('about.sponsorAlt')}
                   className="max-w-xs rounded-lg border border-border"
                 />
               </div>

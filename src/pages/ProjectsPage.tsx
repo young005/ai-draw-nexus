@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { Plus, Trash2, Sparkles, Pencil } from 'lucide-react'
 import {
   Button,
@@ -18,6 +19,7 @@ import type { Project } from '@/types'
 import { ProjectRepository } from '@/services/projectRepository'
 
 export function ProjectsPage() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const location = useLocation()
   const [projects, setProjects] = useState<Project[]>([])
@@ -113,14 +115,14 @@ export function ProjectsPage() {
             {/* Page Title & Actions */}
             <div className="mb-8 flex items-center justify-between">
               <div>
-                <h1 className="text-2xl font-bold text-primary">项目列表</h1>
+                <h1 className="text-2xl font-bold text-primary">{t('projects.title')}</h1>
               </div>
               <Button
                 onClick={() => setIsCreateDialogOpen(true)}
                 className="rounded-full bg-primary px-6 text-surface hover:bg-primary/90"
               >
                 <Plus className="mr-2 h-4 w-4" />
-                新建项目
+                {t('projects.newProject')}
               </Button>
             </div>
 
@@ -132,12 +134,12 @@ export function ProjectsPage() {
             ) : projects.length === 0 ? (
               <div className="flex h-64 flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border bg-surface">
                 <Sparkles className="mb-4 h-12 w-12 text-muted" />
-                <p className="mb-4 text-muted">暂无项目</p>
+                <p className="mb-4 text-muted">{t('projects.empty')}</p>
                 <Button
                   onClick={() => setIsCreateDialogOpen(true)}
                   className="rounded-full bg-primary px-6 text-surface hover:bg-primary/90"
                 >
-                  创建你的第一个项目
+                  {t('projects.createFirst')}
                 </Button>
               </div>
             ) : (
@@ -149,7 +151,7 @@ export function ProjectsPage() {
                   style={{ height: 'calc(8rem + 68px)' }}
                 >
                   <Plus className="mb-2 h-6 w-6 text-muted" />
-                  <span className="text-sm text-muted">新建项目</span>
+                  <span className="text-sm text-muted">{t('projects.newProject')}</span>
                 </button>
 
                 {/* Project Cards */}
@@ -206,16 +208,16 @@ export function ProjectsPage() {
                         </h3>
                         <span className={`flex-shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
                           project.engineType === 'excalidraw'
-                            ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+                            ? 'bg-blue-100 text-blue-700'
                             : project.engineType === 'drawio'
-                              ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
-                              : 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300'
+                              ? 'bg-green-100 text-green-700'
+                              : 'bg-purple-100 text-purple-700'
                         }`}>
                           {project.engineType.toUpperCase()}
                         </span>
                       </div>
                       <p className="text-xs text-muted">
-                        更新于 {formatDate(project.updatedAt)}
+                        {t('projects.updatedAt', { date: formatDate(project.updatedAt) })}
                       </p>
                     </div>
                   </div>
@@ -236,13 +238,13 @@ export function ProjectsPage() {
       <Dialog open={!!renameTarget} onOpenChange={() => setRenameTarget(null)}>
         <DialogContent className="rounded-2xl">
           <DialogHeader>
-            <DialogTitle>重命名项目</DialogTitle>
+            <DialogTitle>{t('projects.renameTitle')}</DialogTitle>
           </DialogHeader>
           <Input
             className='my-4'
             value={newTitle}
             onChange={(e) => setNewTitle(e.target.value)}
-            placeholder="项目名称"
+            placeholder={t('common.projectName')}
             onKeyDown={(e) => {
               if (e.key === 'Enter') handleRename()
             }}
@@ -253,14 +255,14 @@ export function ProjectsPage() {
               onClick={() => setRenameTarget(null)}
               className="rounded-full"
             >
-              取消
+              {t('common.cancel')}
             </Button>
             <Button
               onClick={handleRename}
               disabled={isRenaming || !newTitle.trim()}
               className="rounded-full bg-primary text-surface hover:bg-primary/90"
             >
-              {isRenaming ? '保存中...' : '保存'}
+              {isRenaming ? t('common.saving') : t('common.save')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -270,9 +272,9 @@ export function ProjectsPage() {
       <Dialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
         <DialogContent className="rounded-2xl">
           <DialogHeader>
-            <DialogTitle>删除项目</DialogTitle>
+            <DialogTitle>{t('projects.deleteTitle')}</DialogTitle>
             <DialogDescription className='my-4'>
-              确定要删除 &quot;{deleteTarget?.title}&quot; 吗？此操作无法撤销。
+              {t('projects.deleteConfirm', { title: deleteTarget?.title ?? '' })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -281,14 +283,14 @@ export function ProjectsPage() {
               onClick={() => setDeleteTarget(null)}
               className="rounded-full"
             >
-              取消
+              {t('common.cancel')}
             </Button>
             <Button
               onClick={handleDelete}
               disabled={isDeleting}
               className="rounded-full bg-red-600 text-surface hover:bg-red-700"
             >
-              {isDeleting ? '删除中...' : '删除'}
+              {isDeleting ? t('common.deleting') : t('common.delete')}
             </Button>
           </DialogFooter>
         </DialogContent>

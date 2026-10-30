@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback, forwardRef, useImperativeHandle } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Excalidraw, exportToBlob, exportToSvg, getSceneVersion, restoreElements, convertToExcalidrawElements } from '@excalidraw/excalidraw'
 import '@excalidraw/excalidraw/index.css'
 import type { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types'
@@ -92,6 +93,7 @@ function prepareExcalidrawElements(elements: ExcalidrawElementAny[]): Excalidraw
 }
 
 export const ExcalidrawEditor = forwardRef<ExcalidrawEditorRef, ExcalidrawEditorProps>(function ExcalidrawEditor({ data, onChange, className }, ref) {
+  const { t } = useTranslation()
   const [excalidrawAPI, setExcalidrawAPI] = useState<ExcalidrawImperativeAPI | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [showCodePanel, setShowCodePanel] = useState(false)
@@ -461,9 +463,9 @@ export const ExcalidrawEditor = forwardRef<ExcalidrawEditorRef, ExcalidrawEditor
             {/* Panel Header */}
             <div className="flex items-center justify-between border-b border-border px-3 py-2">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium">Excalidraw 源码</span>
+                <span className="text-sm font-medium">{t('excalidrawEditor.sourceTitle')}</span>
                 {hasChanges && (
-                  <span className="text-xs text-amber-500">• 未保存</span>
+                  <span className="text-xs text-amber-500">{t('sourceCodePanel.unsaved')}</span>
                 )}
               </div>
               <div className="flex items-center gap-1">
@@ -482,7 +484,7 @@ export const ExcalidrawEditor = forwardRef<ExcalidrawEditorRef, ExcalidrawEditor
                       )}
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>{copied ? '已复制' : '复制代码'}</TooltipContent>
+                  <TooltipContent>{copied ? t('sourceCodePanel.copied') : t('sourceCodePanel.copyCode')}</TooltipContent>
                 </Tooltip>
                 <Button
                   variant="ghost"
@@ -530,10 +532,10 @@ export const ExcalidrawEditor = forwardRef<ExcalidrawEditorRef, ExcalidrawEditor
                     className="gap-1.5"
                   >
                     <Undo2 className="h-3.5 w-3.5" />
-                    <span className="text-xs">重置</span>
+                    <span className="text-xs">{t('sourceCodePanel.reset')}</span>
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>重置为原始代码</TooltipContent>
+                <TooltipContent>{t('sourceCodePanel.resetTooltip')}</TooltipContent>
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -545,10 +547,10 @@ export const ExcalidrawEditor = forwardRef<ExcalidrawEditorRef, ExcalidrawEditor
                     className="gap-1.5"
                   >
                     <Play className="h-3.5 w-3.5" />
-                    <span className="text-xs">应用</span>
+                    <span className="text-xs">{t('sourceCodePanel.apply')}</span>
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>应用代码更改</TooltipContent>
+                <TooltipContent>{t('sourceCodePanel.applyTooltip')}</TooltipContent>
               </Tooltip>
             </div>
           </div>

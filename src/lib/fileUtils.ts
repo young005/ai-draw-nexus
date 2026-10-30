@@ -2,6 +2,8 @@
  * File upload utilities for image and document handling
  */
 
+import i18n from '@/i18n'
+
 // Maximum file sizes (in bytes)
 export const MAX_IMAGE_SIZE = 10 * 1024 * 1024 // 10MB
 export const MAX_DOCUMENT_SIZE = 5 * 1024 * 1024 // 5MB
@@ -28,14 +30,14 @@ export function validateImageFile(file: File): FileValidationResult {
   if (!SUPPORTED_IMAGE_TYPES.includes(file.type)) {
     return {
       valid: false,
-      error: `不支持的图片类型：${file.type}。支持的格式：PNG、JPEG、GIF、WebP`,
+      error: i18n.t('errors.unsupportedImageType', { type: file.type }),
     }
   }
 
   if (file.size > MAX_IMAGE_SIZE) {
     return {
       valid: false,
-      error: `图片过大：${(file.size / 1024 / 1024).toFixed(2)}MB。最大支持：10MB`,
+      error: i18n.t('errors.imageTooLarge', { size: (file.size / 1024 / 1024).toFixed(2) }),
     }
   }
 
@@ -61,14 +63,14 @@ export function validateDocumentFile(file: File): FileValidationResult {
   if (!isValidType) {
     return {
       valid: false,
-      error: `不支持的文档类型。支持的格式：docx、txt、md`,
+      error: i18n.t('errors.unsupportedDocumentType'),
     }
   }
 
   if (file.size > MAX_DOCUMENT_SIZE) {
     return {
       valid: false,
-      error: `文档过大：${(file.size / 1024 / 1024).toFixed(2)}MB。最大支持：5MB`,
+      error: i18n.t('errors.documentTooLarge', { size: (file.size / 1024 / 1024).toFixed(2) }),
     }
   }
 
@@ -127,7 +129,7 @@ export async function parseTextFile(file: File): Promise<string> {
     reader.onload = () => {
       resolve(reader.result as string)
     }
-    reader.onerror = () => reject(new Error('读取文件失败'))
+    reader.onerror = () => reject(new Error(i18n.t('errors.readFileFailed')))
     reader.readAsText(file, 'utf-8')
   })
 }
