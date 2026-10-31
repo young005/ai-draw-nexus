@@ -76,6 +76,9 @@ export interface PayloadMessage {
 
 // 用户自定义的 LLM 配置
 export interface LLMConfig {
+  id: string
+  /** 备注名，方便区分同一服务商的不同配置 */
+  name: string
   enabled: boolean
   provider: 'openai' | 'anthropic'
   baseUrl: string
@@ -83,6 +86,12 @@ export interface LLMConfig {
   modelId: string
   /** 直连模式：前端直接请求 AI 服务，不经过后台代理 */
   directConnect: boolean
+}
+
+// 本地保存的自定义 LLM 配置集合
+export interface LLMConfigStore {
+  configs: LLMConfig[]
+  activeId: string | null
 }
 
 // API Request

@@ -25,7 +25,7 @@ function buildAuthContext(): AuthContext {
   }
 
   const password = quotaService.getAccessPassword()
-  const config = quotaService.getLLMConfig()
+  const config = quotaService.getActiveLLMConfig()
   const hasCustom = isValidLLMConfig(config)
 
   if (hasCustom) {
@@ -67,7 +67,7 @@ function ensureQuotaAvailable(): void {
 function buildRequestBody(messages: PayloadMessage[], stream: boolean): ChatRequest & { llmConfig?: LLMConfig } {
   const body: ChatRequest & { llmConfig?: LLMConfig } = { messages, stream }
   const { includeLLMConfig } = buildAuthContext()
-  const config = quotaService.getLLMConfig()
+  const config = quotaService.getActiveLLMConfig()
   if (includeLLMConfig && config) {
     body.llmConfig = config
   }
@@ -254,7 +254,7 @@ export const aiService = {
     ensureQuotaAvailable()
 
     const { directConnect } = buildAuthContext()
-    const config = quotaService.getLLMConfig()
+    const config = quotaService.getActiveLLMConfig()
 
     if (directConnect && config) {
       const request = buildDirectRequest(messages, config, false)
@@ -305,7 +305,7 @@ export const aiService = {
     ensureQuotaAvailable()
 
     const { directConnect } = buildAuthContext()
-    const config = quotaService.getLLMConfig()
+    const config = quotaService.getActiveLLMConfig()
 
     if (directConnect && config) {
       const request = buildDirectRequest(messages, config, true)

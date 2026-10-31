@@ -143,17 +143,27 @@ format: OpenAI `choices[0].delta.content`, Anthropic `content_block_delta`, plus
 All three live in `src/services/quotaService.ts` and localStorage:
 - Daily quota (`ai-draw-quota`) — enforced client-side.
 - Access password (`ai-draw-access-password`) — skips the quota.
-- Custom LLM config (`ai-draw-llm-config`) — `{enabled, provider, baseUrl, apiKey, modelId, directConnect}`.
+- Custom LLM profiles (`ai-draw-llm-configs`) — **a list** of
+  `{id, name, enabled, provider, baseUrl, apiKey, modelId, directConnect}` plus the `activeId`
+  of the one in use. The old single-profile key (`ai-draw-llm-config`) is migrated
+  automatically on first read.
 
-The custom LLM has two modes (`buildAuthContext()` in `src/services/aiService.ts`):
+The active profile has two modes (`buildAuthContext()` in `src/services/aiService.ts`):
 - **Proxy mode** — request goes to `/api/chat` with header `X-Custom-LLM: true` and the config in
   the request body; the backend resolves it over env vars (`resolveLlmSettings()` in
   `functions/api/_shared/types.ts`).
 - **Direct mode** — the browser calls the provider itself (`{baseUrl}/chat/completions` or
   `{baseUrl}/messages`); nothing goes through the backend.
 
-A valid custom config takes priority over the access password. The backend never logs request
+A valid custom profile takes priority over the access password. The backend never logs request
 bodies (they may contain user API keys).
+
+**Probing a profile** (`src/services/llmProbe.ts`) — "load models" and "test connection" follow the
+profile's own mode: direct mode hits the provider from the browser (CORS may block it), proxy mode
+goes through `functions/api/llm.ts`. That endpoint is effectively an open forwarder, so it refuses
+loopback/private/link-local addresses and non-http(s) schemes. Failures are normalized into
+`src/lib/llmErrors.ts` so the UI can say *why* it failed (bad key / unknown model / wrong base URL /
+rate limited / CORS) instead of a generic error.
 
 ### Thumbnails
 
