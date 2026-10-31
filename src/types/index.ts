@@ -69,8 +69,20 @@ export interface PayloadMessage {
   content: string | ContentPart[]
 }
 
+// 用户自定义的 LLM 配置
+export interface LLMConfig {
+  enabled: boolean
+  provider: 'openai' | 'anthropic'
+  baseUrl: string
+  apiKey: string
+  modelId: string
+  /** 直连模式：前端直接请求 AI 服务，不经过后台代理 */
+  directConnect: boolean
+}
+
 // API Request
 export interface ChatRequest {
   messages: PayloadMessage[]
   stream?: boolean
+  llmConfig?: LLMConfig
 }

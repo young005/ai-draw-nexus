@@ -1,9 +1,16 @@
-import type { Env, Message } from './types'
+import type { Env, Message, LLMConfig } from './types'
+import { resolveLlmSettings } from './types'
 import { corsHeaders } from './cors'
 
-export async function streamOpenAI(messages: Message[], env: Env, exempt: boolean = false): Promise<Response> {
-  const baseUrl = env.AI_BASE_URL
-  const apiKey = env.AI_API_KEY
+export async function streamOpenAI(
+  messages: Message[],
+  env: Env,
+  exempt: boolean = false,
+  llmConfig?: LLMConfig
+): Promise<Response> {
+  const settings = resolveLlmSettings(env, llmConfig)
+  const baseUrl = settings.baseUrl
+  const apiKey = settings.apiKey
 
   if (!apiKey) {
     throw new Error('AI_API_KEY not configured')
@@ -16,7 +23,7 @@ export async function streamOpenAI(messages: Message[], env: Env, exempt: boolea
       'Authorization': `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: env.AI_MODEL_ID,
+      model: settings.modelId,
       messages: messages,
       max_tokens: 64000,
       stream: true,

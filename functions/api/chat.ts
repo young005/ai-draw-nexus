@@ -1,4 +1,5 @@
 import type { Env, ChatRequest } from './_shared/types'
+import { resolveLlmSettings } from './_shared/types'
 import { corsHeaders } from './_shared/cors'
 import { validateAccessPassword } from './_shared/auth'
 import { callOpenAI, callAnthropic } from './_shared/ai-providers'
@@ -27,7 +28,7 @@ export const onRequestPost: PagesFunction<Env> = async (context: PagesContext) =
     }
 
     const body: ChatRequest = await request.json()
-    const { messages, stream = false } = body
+    const { messages, stream = false, llmConfig } = body
 
     if (!messages || !Array.isArray(messages)) {
       return new Response(JSON.stringify({ error: 'Invalid request: messages required' }), {
@@ -36,27 +37,29 @@ export const onRequestPost: PagesFunction<Env> = async (context: PagesContext) =
       })
     }
 
-    const provider = env.AI_PROVIDER || 'openai'
+    // 请求级自定义配置优先，其次回落到服务端环境变量
+    const settings = resolveLlmSettings(env, llmConfig)
+    const provider = settings.provider
     const quotaHeaders = { ...corsHeaders, 'X-Quota-Exempt': exempt ? 'true' : 'false' }
 
     if (stream) {
       switch (provider) {
         case 'anthropic':
-          return streamAnthropic(messages, env, exempt)
+          return streamAnthropic(messages, env, exempt, llmConfig)
         case 'openai':
         default:
-          return streamOpenAI(messages, env, exempt)
+          return streamOpenAI(messages, env, exempt, llmConfig)
       }
     } else {
       let response: string
 
       switch (provider) {
         case 'anthropic':
-          response = await callAnthropic(messages, env)
+          response = await callAnthropic(messages, env, llmConfig)
           break
         case 'openai':
         default:
-          response = await callOpenAI(messages, env)
+          response = await callOpenAI(messages, env, llmConfig)
           break
       }
 
@@ -65,7 +68,8 @@ export const onRequestPost: PagesFunction<Env> = async (context: PagesContext) =
       })
     }
   } catch (error) {
-    console.error('Chat error:', error)
+    // 注意：不要打印请求体，其中可能含有用户自己的 API Key
+    console.error('Chat error:', error instanceof Error ? error.message : 'Unknown error')
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
     return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,

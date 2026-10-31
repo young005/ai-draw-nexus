@@ -1,10 +1,35 @@
 /**
  * 配额管理服务
- * 管理每日使用配额和访问密码
+ * 管理每日使用配额、访问密码与自定义 LLM 配置
  */
+
+import type { LLMConfig } from '@/types'
+
+export type { LLMConfig }
 
 const QUOTA_STORAGE_KEY = 'ai-draw-quota'
 const PASSWORD_STORAGE_KEY = 'ai-draw-access-password'
+const LLM_CONFIG_STORAGE_KEY = 'ai-draw-llm-config'
+
+export const EMPTY_LLM_CONFIG: LLMConfig = {
+  enabled: true,
+  provider: 'openai',
+  baseUrl: '',
+  apiKey: '',
+  modelId: '',
+  directConnect: false,
+}
+
+/** 自定义配置是否完整可用 */
+export function isValidLLMConfig(config: LLMConfig | null | undefined): boolean {
+  return !!(
+    config &&
+    config.enabled !== false &&
+    config.apiKey?.trim() &&
+    config.baseUrl?.trim() &&
+    config.modelId?.trim()
+  )
+}
 
 interface QuotaData {
   date: string // 格式: "2025-12-25"
@@ -113,5 +138,39 @@ export const quotaService = {
    */
   hasAccessPassword(): boolean {
     return !!this.getAccessPassword()
+  },
+
+  /**
+   * 读取自定义 LLM 配置
+   */
+  getLLMConfig(): LLMConfig | null {
+    const stored = localStorage.getItem(LLM_CONFIG_STORAGE_KEY)
+    if (!stored) return null
+    try {
+      return JSON.parse(stored) as LLMConfig
+    } catch {
+      return null
+    }
+  },
+
+  /**
+   * 保存自定义 LLM 配置
+   */
+  setLLMConfig(config: LLMConfig): void {
+    localStorage.setItem(LLM_CONFIG_STORAGE_KEY, JSON.stringify(config))
+  },
+
+  /**
+   * 清除自定义 LLM 配置
+   */
+  clearLLMConfig(): void {
+    localStorage.removeItem(LLM_CONFIG_STORAGE_KEY)
+  },
+
+  /**
+   * 是否已配置可用的自定义 LLM
+   */
+  hasLLMConfig(): boolean {
+    return isValidLLMConfig(this.getLLMConfig())
   },
 }

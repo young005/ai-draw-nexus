@@ -1,4 +1,5 @@
-import type { Env, Message, ContentPart, AnthropicContentPart, OpenAIResponse, AnthropicResponse } from './types'
+import type { Env, Message, ContentPart, AnthropicContentPart, OpenAIResponse, AnthropicResponse, LLMConfig } from './types'
+import { resolveLlmSettings } from './types'
 
 export function convertContentPartsToAnthropic(parts: ContentPart[]): AnthropicContentPart[] {
   return parts
@@ -28,9 +29,10 @@ export function convertContentPartsToAnthropic(parts: ContentPart[]): AnthropicC
     .filter((part) => part.type === 'image' || (part.type === 'text' && part.text))
 }
 
-export async function callOpenAI(messages: Message[], env: Env): Promise<string> {
-  const baseUrl = env.AI_BASE_URL
-  const apiKey = env.AI_API_KEY
+export async function callOpenAI(messages: Message[], env: Env, llmConfig?: LLMConfig): Promise<string> {
+  const settings = resolveLlmSettings(env, llmConfig)
+  const baseUrl = settings.baseUrl
+  const apiKey = settings.apiKey
 
   if (!apiKey) {
     throw new Error('AI_API_KEY not configured')
@@ -43,7 +45,7 @@ export async function callOpenAI(messages: Message[], env: Env): Promise<string>
       'Authorization': `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: env.AI_MODEL_ID,
+      model: settings.modelId,
       messages: messages,
       max_tokens: 64000,
       stream: false,
@@ -59,9 +61,10 @@ export async function callOpenAI(messages: Message[], env: Env): Promise<string>
   return data.choices[0]?.message?.content || ''
 }
 
-export async function callAnthropic(messages: Message[], env: Env): Promise<string> {
-  const baseUrl = env.AI_BASE_URL
-  const apiKey = env.AI_API_KEY
+export async function callAnthropic(messages: Message[], env: Env, llmConfig?: LLMConfig): Promise<string> {
+  const settings = resolveLlmSettings(env, llmConfig)
+  const baseUrl = settings.baseUrl
+  const apiKey = settings.apiKey
 
   if (!apiKey) {
     throw new Error('AI_API_KEY not configured')
@@ -83,7 +86,7 @@ export async function callAnthropic(messages: Message[], env: Env): Promise<stri
       'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify({
-      model: env.AI_MODEL_ID,
+      model: settings.modelId,
       max_tokens: 64000,
       system: typeof systemMessage?.content === 'string' ? systemMessage.content : '',
       messages: anthropicMessages,
