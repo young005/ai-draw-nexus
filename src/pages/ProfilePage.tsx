@@ -5,8 +5,7 @@ import { Button, Input } from '@/components/ui'
 import { quotaService, EMPTY_LLM_CONFIG, isValidLLMConfig } from '@/services/quotaService'
 import type { LLMConfig } from '@/types'
 import { useToast } from '@/hooks/useToast'
-import { Settings, Eye, EyeOff, MessageCircle, KeyRound, Trash2 } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Settings, Eye, EyeOff, KeyRound, Trash2 } from 'lucide-react'
 
 export function ProfilePage() {
   const { t } = useTranslation()
@@ -175,13 +174,6 @@ function PasswordSection({
           </button>
         </div>
         <p className="text-xs text-muted">{t('profile.passwordHint')}</p>
-        <Link
-          to="/about"
-          className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
-        >
-          <MessageCircle className="h-3 w-3" />
-          <span>{t('profile.sponsorLink')}</span>
-        </Link>
         <div className="flex gap-2">
           <Button size="sm" onClick={onSave}>
             {t('common.save')}

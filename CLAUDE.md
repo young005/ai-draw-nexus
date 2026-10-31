@@ -82,7 +82,7 @@ direct-connect mode (see BYOK below).
 ### Routes
 
 `/` app home · `/landing` marketing page · `/projects` project list · `/editor/:projectId` editor ·
-`/profile` settings · `/about` about. Defined in `src/App.tsx`.
+`/profile` settings. Unmatched paths redirect to `/` (catch-all route). Defined in `src/App.tsx`.
 
 ### Three parallel stores (easy to confuse)
 

@@ -13,7 +13,6 @@ import {
   MessageSquare,
   LayoutTemplate,
   History,
-  Mail,
   Quote,
   Star,
   Globe,
@@ -212,7 +211,9 @@ export function LandingPage() {
             <Button
               variant="outline"
               size="lg"
-              onClick={() => navigate('/about')}
+              onClick={() => {
+                document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })
+              }}
               className="h-14 rounded-full border-slate-300 px-8 text-lg transition-colors duration-300 hover:bg-slate-100"
             >
               {t('landing.learnMore')}
@@ -286,32 +287,6 @@ export function LandingPage() {
                   content={review.content}
                 />
               ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Contact */}
-        <section id="contact" className="bg-white px-6 py-20">
-          <div className="mx-auto max-w-4xl text-center">
-            <div className="mb-8 inline-flex items-center justify-center rounded-3xl bg-brand/10 p-4 text-brand">
-              <Mail className="h-8 w-8" />
-            </div>
-            <h2 className="mb-6 text-4xl font-bold tracking-tight text-slate-900 md:text-5xl">
-              {t('landing.contactTitle')}
-            </h2>
-            <p className="mx-auto mb-10 max-w-2xl font-light text-lg text-slate-600">
-              {t('landing.contactSubtitle')}
-            </p>
-            <div className="flex flex-col justify-center gap-4 sm:flex-row">
-              <Button
-                size="lg"
-                variant="outline"
-                onClick={() => navigate('/about')}
-                className="h-14 rounded-full border-slate-300 px-8 text-lg transition-colors hover:bg-slate-50"
-              >
-                <Mail className="mr-2 h-5 w-5" />
-                {t('landing.contactAbout')}
-              </Button>
             </div>
           </div>
         </section>
