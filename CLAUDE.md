@@ -10,7 +10,8 @@ rendering engines: Mermaid, Excalidraw, or Draw.io.
 
 Frontend is React 19 + Vite + TypeScript + Tailwind CSS 4 + i18next. Backend is Cloudflare Pages
 Functions (`functions/`) acting as a thin proxy to an OpenAI-compatible or Anthropic API. All user
-data (projects, version history) lives in the browser's IndexedDB via Dexie — there is no server-side DB.
+data (projects, version history, chat history) lives in the browser's IndexedDB via Dexie — there is
+no server-side DB.
 
 The UI mirrors the deployed reference build (ai-draw-nexus.aizhi.site): same copy deck, same design
 tokens, same feature set. Copy lives in `src/i18n/locales/{zh-CN,en-US}.ts` (25 namespaces, 373 keys
@@ -189,6 +190,26 @@ toolbar.
 AI generation auto-saves a version and marks content as saved (`setContentFromVersion`, which
 clears `hasUnsavedChanges`). Manual engine edits only update the store — the user saves a version
 explicitly from the editor toolbar.
+
+### Chat history persistence
+
+The chat transcript is stored **per project** in the `chatMessages` table (`src/services/chatRepository.ts`),
+including image attachments (base64 data URLs, same representation as project thumbnails).
+
+`src/stores/chatStore.ts` owns the writes:
+- `addMessage` persists **user** messages immediately (they carry the attachments).
+- Assistant messages are persisted by `saveMessage(id)` only once generation finishes
+  (`src/hooks/useAIGenerate.ts` calls it on success and on error). `updateMessage` deliberately
+  does *not* persist — it runs on every stream chunk, and writing each chunk to IndexedDB would
+  thrash the database. A reload mid-generation therefore loses the unfinished assistant message
+  but keeps the user's.
+- `clearMessages` (the "new conversation" button) also deletes the project's stored rows;
+  `removeMessage` deletes a single row.
+- `setActiveProject(projectId)` loads a project's history; `EditorPage` awaits it before the chat
+  panel mounts so the transcript doesn't flash empty.
+
+Deleting a project cascades: `ProjectRepository.delete` removes its version history *and* chat rows
+in one transaction.
 
 ## Design System
 

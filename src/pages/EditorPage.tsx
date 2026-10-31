@@ -41,7 +41,7 @@ export function EditorPage() {
   const { success } = useToast()
 
   const { currentProject, currentContent, hasUnsavedChanges, setProject, setContentFromVersion, markAsSaved, reset: resetEditor } = useEditorStore()
-  const { clearMessages } = useChatStore()
+  const { setActiveProject } = useChatStore()
 
   // Load project on mount
   useEffect(() => {
@@ -57,7 +57,6 @@ export function EditorPage() {
     setIsLoading(true)
     // Clear previous project data before loading new one
     resetEditor()
-    clearMessages()
     try {
       const project = await ProjectRepository.getById(id)
       if (!project) {
@@ -73,6 +72,9 @@ export function EditorPage() {
       if (latestVersion) {
         setContentFromVersion(latestVersion.content)
       }
+
+      // 载入该项目的聊天记录（在面板挂载前完成，避免闪空）
+      await setActiveProject(project.id)
     } catch (error) {
       console.error('Failed to load project:', error)
       navigate('/projects')

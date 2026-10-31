@@ -1,5 +1,5 @@
 import Dexie, { type EntityTable } from 'dexie'
-import type { Project, VersionHistory } from '@/types'
+import type { Project, VersionHistory, StoredChatMessage } from '@/types'
 
 /**
  * AI Diagram Hub Database
@@ -8,6 +8,7 @@ import type { Project, VersionHistory } from '@/types'
 class DiagramHubDB extends Dexie {
   projects!: EntityTable<Project, 'id'>
   versionHistory!: EntityTable<VersionHistory, 'id'>
+  chatMessages!: EntityTable<StoredChatMessage, 'id'>
 
   constructor() {
     super('DiagramHubDB')
@@ -17,6 +18,13 @@ class DiagramHubDB extends Dexie {
       projects: 'id, title, engineType, createdAt, updatedAt',
       // Primary key: id, indexed fields: projectId, timestamp
       versionHistory: 'id, projectId, timestamp',
+    })
+
+    this.version(2).stores({
+      projects: 'id, title, engineType, createdAt, updatedAt',
+      versionHistory: 'id, projectId, timestamp',
+      // Primary key: id, indexed fields: projectId, timestamp
+      chatMessages: 'id, projectId, timestamp',
     })
   }
 }

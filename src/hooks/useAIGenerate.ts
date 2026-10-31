@@ -88,6 +88,7 @@ export function useAIGenerate() {
     addMessage,
     updateMessage,
     setStreaming,
+    saveMessage,
   } = useChatStore()
 
   const canvasIsEmpty = useEditorStore(selectIsEmpty)
@@ -207,6 +208,9 @@ export function useAIGenerate() {
         code: finalCode,
       })
 
+      // 生成结束，把助手消息（含源码）保存到本地
+      await saveMessage(assistantMsgId)
+
       // Save version
       await VersionRepository.create({
         projectId: currentProject.id,
@@ -259,6 +263,7 @@ export function useAIGenerate() {
         content: `Error: ${error instanceof Error ? error.message : t('ai.generationFailed')}`,
         status: 'error',
       })
+      await saveMessage(assistantMsgId)
       showError(error instanceof Error ? error.message : t('ai.generationFailed'))
     } finally {
       setStreaming(false)

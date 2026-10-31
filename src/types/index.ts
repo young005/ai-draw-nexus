@@ -55,6 +55,11 @@ export interface ChatMessage {
   code?: string
 }
 
+// 聊天记录落库行（按项目归属）
+export interface StoredChatMessage extends ChatMessage {
+  projectId: string
+}
+
 // Payload Message (Message Payload Store - OpenAI compatible)
 export interface ContentPart {
   type: 'text' | 'image_url'
