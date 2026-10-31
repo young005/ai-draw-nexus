@@ -5,12 +5,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project Overview
 
 AI Diagram Hub — an AI-powered diagram creation platform. The user describes a diagram in natural
-language (or uploads an image/document/URL), and AI generates it in one of three rendering engines:
-Mermaid, Excalidraw, or Draw.io.
+language (or pastes an image / document / diagram source / URL), and AI generates it in one of three
+rendering engines: Mermaid, Excalidraw, or Draw.io.
 
-Frontend is React 19 + Vite + TypeScript + Tailwind CSS 4. Backend is Cloudflare Pages Functions
-(`functions/`) acting as a thin proxy to an OpenAI-compatible or Anthropic API. All user data
-(projects, version history) lives in the browser's IndexedDB via Dexie — there is no server-side DB.
+Frontend is React 19 + Vite + TypeScript + Tailwind CSS 4 + i18next. Backend is Cloudflare Pages
+Functions (`functions/`) acting as a thin proxy to an OpenAI-compatible or Anthropic API. All user
+data (projects, version history) lives in the browser's IndexedDB via Dexie — there is no server-side DB.
+
+The UI mirrors the deployed reference build (ai-draw-nexus.aizhi.site): same copy deck, same design
+tokens, same feature set. Copy lives in `src/i18n/locales/{zh-CN,en-US}.ts` (25 namespaces, 373 keys
+each) — **never hardcode user-facing strings**, add a key to both locales instead.
 
 ## Development Commands
 
@@ -32,8 +36,12 @@ pnpm run pages:deploy   # build + wrangler pages deploy dist
 `tsconfig.app.json` covering only `src/` — `functions/` is **not** type-checked by the build, so
 backend type errors only surface at runtime in wrangler.
 
+`pnpm run lint` has a pre-existing baseline of ~22 problems (mostly `any`/exhaustive-deps in the
+engine components); don't raise that number. `eslint.config.js` ignores `dist` and `.wrangler`.
+
 During development, hit `http://localhost:8787` (wrangler proxies to Vite) so that `/api/*` calls
-resolve to the local Functions.
+resolve to the local Functions. If 8787 is taken, wrangler picks the next free port — read the
+"Ready on http://127.0.0.1:PORT" line from the dev server output.
 
 ## Environment Setup
 
@@ -68,14 +76,19 @@ User input → ChatPanel → useAIGenerate → promptBuilder → aiService → P
                                       OpenAI-compatible OR Anthropic upstream
 ```
 
-The browser never talks to the model provider directly; the Pages Function holds the API key and
-translates between provider formats.
+The browser never talks to the model provider directly *unless* the user enabled a custom LLM in
+direct-connect mode (see BYOK below).
+
+### Routes
+
+`/` app home · `/landing` marketing page · `/projects` project list · `/editor/:projectId` editor ·
+`/profile` settings · `/about` about. Defined in `src/App.tsx`.
 
 ### Three parallel stores (easy to confuse)
 
 | Store | Holds | Purpose |
 |---|---|---|
-| `src/stores/chatStore.ts` | `ChatMessage[]` | UI-facing message list (role, status, attachments) rendered by ChatPanel |
+| `src/stores/chatStore.ts` | `ChatMessage[]` | UI-facing message list (role, status, attachments, generated `code`) |
 | `src/stores/payloadStore.ts` | `PayloadMessage[]` | The actual OpenAI-compatible request body sent to `/api/chat` |
 | `src/stores/editorStore.ts` | current project + canvas content | The single source of truth for what is on the canvas |
 
@@ -89,7 +102,7 @@ translates between provider formats.
 - `drawio` — `mxGraphModel` XML
 
 `src/lib/validators/index.ts` validates each format before the content is accepted. Mermaid is
-validated with a dynamic `import('mermaid')` + `mermaid.parse()`.
+validated with a dynamic `import('mermaid')` + `mermaid.parse()`. The same validator gates imports.
 
 ### Generation and the Mermaid auto-fix loop
 
@@ -100,35 +113,46 @@ validated with a dynamic `import('mermaid')` + `mermaid.parse()`.
 3. `extractCode()` (`src/lib/promptBuilder.ts`) strips markdown fences from the model reply.
 4. Validate. If Mermaid fails to parse, ask the model to repair it — up to 3 attempts
    (`MAX_MERMAID_FIX_ATTEMPTS`), re-validating after each. Non-Mermaid engines have no auto-fix.
-5. Write to the editor store, create a version-history entry, then regenerate the thumbnail.
+5. Write to the editor store, create a version-history entry, store the code on the assistant
+   message (so the chat can show it), then regenerate the thumbnail.
 
 The two-phase generation path (elements first, then connections) exists in `useAIGenerate` but is
 currently disabled — `useTwoPhase` is hardcoded `false`, so every engine uses single-phase.
 
-### Multimodal attachments
+### Multimodal input: paste, upload, import
 
-- Images → base64 data URLs sent as `image_url` parts.
-- Documents (`.docx`/`.txt`/`.md`) → text extracted in the browser (`mammoth` for docx) and injected
-  as a text part prefixed with `[Document: <name>]`.
-- URLs → server-side `POST /api/parse-url` (`functions/api/parse-url.ts`), which uses
-  `@mozilla/readability` + `linkedom` + `turndown` to produce markdown. Has a dedicated
-  WeChat (`mp.weixin.qq.com`) preprocessing path.
+- **Paste** (`onPaste` on the chat and home textareas): files in the clipboard become attachments
+  (image → `image_url` part, document → `[Document: name]` text part). Pasted *text* is sniffed by
+  `looksLikeDiagramSource()` in `src/lib/fileUtils.ts`; if it looks like Mermaid/Draw.io/Excalidraw
+  source, `usePasteSource` intercepts it and offers "import as a new project" instead of sending it
+  as a message.
+- **Upload**: same conversion path via `toAttachment()` — one implementation, two entry points.
+- **Import dialog** (`src/features/project/ImportDialog.tsx`): file upload or pasted text; engine is
+  detected from the file extension (`EXT_ENGINE_MAP`), content is validated, one project per file.
 
 ### Streaming
 
-`aiService.streamChat` consumes SSE and normalizes three provider shapes into one internal
-`{ content }` JSON line format: OpenAI `choices[0].delta.content`, Anthropic
-`content_block_delta`, and plain `{content}`/`{text}`. The Functions layer re-wraps upstream SSE
-into that normalized format (`_shared/stream-openai.ts`, `_shared/stream-anthropic.ts`), so the
-frontend only ever parses one shape.
+`aiService.streamChat` consumes SSE and normalizes provider shapes into one internal `{ content }`
+format: OpenAI `choices[0].delta.content`, Anthropic `content_block_delta`, plus plain
+`{content}`/`{text}`. The Functions layer re-wraps upstream SSE into that same format
+(`_shared/stream-openai.ts`, `_shared/stream-anthropic.ts`), so the frontend parses only one shape.
 
-### Quota and access password
+### Quota, access password, and custom LLM (BYOK)
 
-Client-side daily quota lives in `localStorage` (`src/services/quotaService.ts`). Password holders
-skip the quota. The backend independently decides exemption via `validateAccessPassword()`
-(`functions/api/_shared/auth.ts`) and signals it with the `X-Quota-Exempt` response header; the
-frontend consumes quota only when that header is not `true`. Quota is enforced per browser
-profile, not per user.
+All three live in `src/services/quotaService.ts` and localStorage:
+- Daily quota (`ai-draw-quota`) — enforced client-side.
+- Access password (`ai-draw-access-password`) — skips the quota.
+- Custom LLM config (`ai-draw-llm-config`) — `{enabled, provider, baseUrl, apiKey, modelId, directConnect}`.
+
+The custom LLM has two modes (`buildAuthContext()` in `src/services/aiService.ts`):
+- **Proxy mode** — request goes to `/api/chat` with header `X-Custom-LLM: true` and the config in
+  the request body; the backend resolves it over env vars (`resolveLlmSettings()` in
+  `functions/api/_shared/types.ts`).
+- **Direct mode** — the browser calls the provider itself (`{baseUrl}/chat/completions` or
+  `{baseUrl}/messages`); nothing goes through the backend.
+
+A valid custom config takes priority over the access password. The backend never logs request
+bodies (they may contain user API keys).
 
 ### Thumbnails
 
@@ -143,12 +167,21 @@ Thumbnails are base64 data URLs stored on the project record.
 
 `src/features/engines/<engine>/` — each editor is a `forwardRef` component exposing the same
 ref API (`exportAsSvg`, `exportAsPng`, `exportAsSource`, `showSourceCode`, `toggleSourceCode`).
-`src/features/editor/CanvasArea.tsx` switches on `engineType` and forwards the calls. Adding a
-new engine means touching: `src/types/index.ts` (`EngineType`), `src/lib/prompts/`,
+`src/features/editor/CanvasArea.tsx` switches on `engineType` and forwards the calls. The source-code
+editor is shared: `src/features/editor/SourceCodePanel.tsx` (Monaco + copy/reset/apply).
+
+Adding a new engine means touching: `src/types/index.ts` (`EngineType`), `src/lib/prompts/`,
 `src/lib/validators/index.ts`, `src/lib/thumbnail.ts`, `src/features/engines/`, and `CanvasArea`.
 
 Excalidraw and Draw.io editors are keyed by `projectId` so switching projects remounts them —
 this prevents Excalidraw from restoring stale `localStorage` scenes.
+
+### Mermaid themes
+
+Five themes live in `src/lib/mermaidThemes.ts` (Notion / Minimal / Hand Drawn / Material / Playful
+Doodle), each with `themeVariables` plus extra `themeCSS` injected into the rendered SVG. The
+selection persists in localStorage (`ai-draw-nexus.mermaidTheme`); the picker is in the Mermaid
+toolbar.
 
 ### Version history
 
@@ -156,6 +189,25 @@ this prevents Excalidraw from restoring stale `localStorage` scenes.
 AI generation auto-saves a version and marks content as saved (`setContentFromVersion`, which
 clears `hasUnsavedChanges`). Manual engine edits only update the store — the user saves a version
 explicitly from the editor toolbar.
+
+## Design System
+
+`src/index.css` holds the Tailwind 4 `@theme` block (colors, fonts, shadows) and a `@layer
+components` block with the shared surface classes (`chip`, `surface-card`, `page-frame`, …).
+Colors are slate/neutral based with `brand` = near-black `#0f172a` and `brand-hover` = `#5753d0`;
+status colors are `success` / `warning` / `danger` / `info` with matching `-soft` backgrounds.
+Engine accents: Mermaid → brand, Excalidraw → warning, Draw.io → success.
+
+## Key Patterns
+
+- **Path alias**: `@/` → `src/` (configured in both `vite.config.ts` and `tsconfig.app.json`).
+- **Tailwind CSS 4** via the `@tailwindcss/vite` plugin; UI primitives live in `src/components/ui/`
+  (Radix-based Dialog/Dropdown/Toast/Tooltip, `cn()` from `src/lib/utils.ts`).
+- **i18n**: `useTranslation()` from `react-i18next` in components; `i18n.t()` in plain modules
+  (`fileUtils`, `aiService`, `quotaService`). Locale files must stay key-aligned.
+- **Comments and UI strings are mixed Chinese/English** — match the surrounding file's language.
+- **Radix components use `asChild`** where a custom trigger is needed.
+- `verbatimModuleSyntax` is on: use `import type` for type-only imports.
 
 ## Deployment
 
@@ -166,12 +218,3 @@ Two independent deployments, described in `deploy.md`:
 
 When the backend is a separate Worker, set `VITE_API_BASE_URL` to the Worker URL and redeploy the
 frontend — otherwise the frontend's default `/api` base will 404 against Pages.
-
-## Key Patterns
-
-- **Path alias**: `@/` → `src/` (configured in both `vite.config.ts` and `tsconfig.app.json`).
-- **Tailwind CSS 4** via the `@tailwindcss/vite` plugin; UI primitives live in `src/components/ui/`
-  (Radix-based Dialog/Dropdown/Toast/Tooltip, `cn()` from `src/lib/utils.ts`).
-- **Comments and UI strings are mixed Chinese/English** — match the surrounding file's language.
-- **Radix components use `asChild`** where a custom trigger is needed.
-- `verbatimModuleSyntax` is on: use `import type` for type-only imports.
