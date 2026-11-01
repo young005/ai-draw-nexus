@@ -1,5 +1,5 @@
 import type { PayloadMessage, ChatRequest } from '@/types'
-import { quotaService, isValidLLMConfig } from './quotaService'
+import { userSettings, isValidLLMConfig } from './userSettings'
 import { describeLLMError, truncateDetail } from '@/lib/llmErrors'
 import type { LLMConfig } from '@/types'
 import i18n from '@/i18n'
@@ -25,8 +25,8 @@ function buildAuthContext(): AuthContext {
     'Content-Type': 'application/json',
   }
 
-  const password = quotaService.getAccessPassword()
-  const config = quotaService.getActiveLLMConfig()
+  const password = userSettings.getAccessPassword()
+  const config = userSettings.getActiveLLMConfig()
   const hasCustom = isValidLLMConfig(config)
 
   if (hasCustom) {
@@ -43,46 +43,12 @@ function buildAuthContext(): AuthContext {
 }
 
 /**
- * 本次请求是否由用户自己的模型服务承担。
- * 用户自带密钥时站点没有成本，不应该占用每日配额。
- */
-function usesCustomLLM(): boolean {
-  return isValidLLMConfig(quotaService.getActiveLLMConfig())
-}
-
-/**
- * 检查配额并在需要时消耗
- */
-function checkAndConsumeQuota(response: Response): void {
-  // 用户自带模型时不消耗站点配额
-  if (usesCustomLLM()) return
-
-  const quotaExempt = response.headers.get('X-Quota-Exempt')
-  // 只有当不免除配额时才消耗
-  if (quotaExempt !== 'true') {
-    quotaService.consumeQuota()
-  }
-}
-
-/**
- * 检查是否有足够配额
- * 访问密码与自定义模型都会跳过配额限制
- */
-function ensureQuotaAvailable(): void {
-  if (usesCustomLLM()) return
-
-  if (!quotaService.hasAccessPassword() && !quotaService.hasQuotaRemaining()) {
-    throw new Error(i18n.t('errors.quotaExceeded'))
-  }
-}
-
-/**
  * 构造请求体：带上自定义 LLM 配置（后端代理模式）
  */
 function buildRequestBody(messages: PayloadMessage[], stream: boolean): ChatRequest & { llmConfig?: LLMConfig } {
   const body: ChatRequest & { llmConfig?: LLMConfig } = { messages, stream }
   const { includeLLMConfig } = buildAuthContext()
-  const config = quotaService.getActiveLLMConfig()
+  const config = userSettings.getActiveLLMConfig()
   if (includeLLMConfig && config) {
     body.llmConfig = config
   }
@@ -289,10 +255,9 @@ export const aiService = {
    * Send chat messages to AI and get response (non-streaming)
    */
   async chat(messages: PayloadMessage[]): Promise<string> {
-    ensureQuotaAvailable()
 
     const { directConnect } = buildAuthContext()
-    const config = quotaService.getActiveLLMConfig()
+    const config = userSettings.getActiveLLMConfig()
 
     if (directConnect && config) {
       const request = buildDirectRequest(messages, config, false)
@@ -320,7 +285,6 @@ export const aiService = {
       throw await toRequestError(response, 'proxy')
     }
 
-    checkAndConsumeQuota(response)
 
     const data = await response.json()
     return data.content || data.message || ''
@@ -338,10 +302,9 @@ export const aiService = {
     onChunk: (chunk: string, accumulated: string) => void,
     onComplete?: (content: string) => void
   ): Promise<string> {
-    ensureQuotaAvailable()
 
     const { directConnect } = buildAuthContext()
-    const config = quotaService.getActiveLLMConfig()
+    const config = userSettings.getActiveLLMConfig()
 
     if (directConnect && config) {
       const request = buildDirectRequest(messages, config, true)
@@ -370,8 +333,6 @@ export const aiService = {
       throw await toRequestError(response, 'proxy')
     }
 
-    // 流式请求成功后检查并消耗配额
-    checkAndConsumeQuota(response)
 
     const fullContent = await readSSE(response, onChunk)
 

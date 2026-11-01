@@ -6,7 +6,6 @@ import { convertContentPartsToAnthropic } from './ai-providers'
 export async function streamAnthropic(
   messages: Message[],
   env: Env,
-  exempt: boolean = false,
   llmConfig?: LLMConfig
 ): Promise<Response> {
   const settings = resolveLlmSettings(env, llmConfig)
@@ -98,7 +97,6 @@ export async function streamAnthropic(
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
       'Connection': 'keep-alive',
-      'X-Quota-Exempt': exempt ? 'true' : 'false',
     },
   })
 }

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AppSidebar, AppHeader } from '@/components/layout'
 import { Button, Input } from '@/components/ui'
-import { quotaService } from '@/services/quotaService'
+import { userSettings } from '@/services/userSettings'
 import { LLMSettings } from '@/features/profile/LLMSettings'
 import { useToast } from '@/hooks/useToast'
 import { Settings, Eye, EyeOff } from 'lucide-react'
@@ -10,10 +10,8 @@ import { Settings, Eye, EyeOff } from 'lucide-react'
 export function ProfilePage() {
   const { t } = useTranslation()
   const [activeTab] = useState('settings')
-  const [password, setPassword] = useState(() => quotaService.getAccessPassword())
+  const [password, setPassword] = useState(() => userSettings.getAccessPassword())
   const [showPassword, setShowPassword] = useState(false)
-  const [quotaUsed] = useState(() => quotaService.getUsedCount())
-  const [quotaTotal] = useState(() => quotaService.getDailyQuota())
   const { success, error: showError } = useToast()
 
   const handleSavePassword = () => {
@@ -21,19 +19,17 @@ export function ProfilePage() {
       showError(t('profile.passwordRequired'))
       return
     }
-    quotaService.setAccessPassword(password.trim())
+    userSettings.setAccessPassword(password.trim())
     success(t('profile.passwordSaved'))
   }
 
   const handleResetPassword = () => {
-    quotaService.clearAccessPassword()
+    userSettings.clearAccessPassword()
     setPassword('')
     success(t('profile.passwordCleared'))
   }
 
-  const quotaPercentage = Math.min(100, (quotaUsed / quotaTotal) * 100)
-  const hasPassword = quotaService.hasAccessPassword()
-  const hasCustomLLM = quotaService.hasLLMConfig()
+  const hasPassword = userSettings.hasAccessPassword()
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -63,20 +59,9 @@ export function ProfilePage() {
               <div className="flex-1 p-6">
                 <h2 className="mb-6 text-lg font-medium text-primary">{t('profile.settings')}</h2>
 
-                {/* 每日配额 */}
-                <QuotaSection
-                  quotaUsed={quotaUsed}
-                  quotaTotal={quotaTotal}
-                  quotaPercentage={quotaPercentage}
-                  hasPassword={hasPassword}
-                  hasCustomLLM={hasCustomLLM}
-                />
-
-                {/* 分隔线 */}
-                <div className="my-6 border-t border-border" />
-
                 {/* 访问密码 */}
                 <PasswordSection
+                  hasPassword={hasPassword}
                   password={password}
                   setPassword={setPassword}
                   showPassword={showPassword}
@@ -99,56 +84,8 @@ export function ProfilePage() {
   )
 }
 
-interface QuotaSectionProps {
-  quotaUsed: number
-  quotaTotal: number
-  quotaPercentage: number
-  hasPassword: boolean
-  hasCustomLLM: boolean
-}
-
-function QuotaSection({
-  quotaUsed,
-  quotaTotal,
-  quotaPercentage,
-  hasPassword,
-  hasCustomLLM,
-}: QuotaSectionProps) {
-  const { t } = useTranslation()
-
-  return (
-    <div>
-      <h3 className="mb-3 text-sm font-medium text-primary">{t('profile.dailyQuota')}</h3>
-      <div className="space-y-3">
-        {/* 进度条 */}
-        <div className="h-2 w-full overflow-hidden rounded-full bg-background">
-          <div
-            className="h-full rounded-full bg-primary transition-all duration-300"
-            style={{ width: `${quotaPercentage}%` }}
-          />
-        </div>
-        {/* 配额信息 */}
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-muted">
-            {t('profile.quotaUsed', { used: quotaUsed, total: quotaTotal })}
-          </span>
-          {hasPassword && (
-            <span className="rounded-full bg-success-soft px-2 py-0.5 text-xs text-success">
-              {t('profile.quotaUnlimited')}
-            </span>
-          )}
-          {!hasPassword && hasCustomLLM && (
-            <span className="rounded-full bg-success-soft px-2 py-0.5 text-xs text-success">
-              {t('profile.quotaCustomLLM')}
-            </span>
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
-
 interface PasswordSectionProps {
+  hasPassword: boolean
   password: string
   setPassword: (value: string) => void
   showPassword: boolean
@@ -158,6 +95,7 @@ interface PasswordSectionProps {
 }
 
 function PasswordSection({
+  hasPassword,
   password,
   setPassword,
   showPassword,
@@ -169,7 +107,14 @@ function PasswordSection({
 
   return (
     <div>
-      <h3 className="mb-3 text-sm font-medium text-primary">{t('profile.accessPassword')}</h3>
+      <div className="mb-3 flex items-center gap-2">
+        <h3 className="text-sm font-medium text-primary">{t('profile.accessPassword')}</h3>
+        {hasPassword && (
+          <span className="rounded-full bg-success-soft px-2 py-0.5 text-[10px] font-semibold text-success">
+            {t('profile.passwordConfigured')}
+          </span>
+        )}
+      </div>
       <div className="space-y-3">
         <div className="relative">
           <Input

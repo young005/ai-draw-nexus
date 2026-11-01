@@ -15,7 +15,7 @@ import {
 } from 'lucide-react'
 import { Button, Input, Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui'
 import { useToast } from '@/hooks/useToast'
-import { quotaService, EMPTY_LLM_CONFIG, isValidLLMConfig } from '@/services/quotaService'
+import { userSettings, EMPTY_LLM_CONFIG, isValidLLMConfig } from '@/services/userSettings'
 import { loadLLMModels, testLLMConfig } from '@/services/llmProbe'
 import { findMissingLLMField } from '@/lib/llmErrors'
 import { LLM_PROVIDER_PRESETS, findLLMProviderPreset } from '@/constants/llmProviders'
@@ -30,9 +30,9 @@ export function LLMSettings() {
   const { t } = useTranslation()
   const { success, error: showError } = useToast()
 
-  const [configs, setConfigs] = useState<LLMConfig[]>(() => quotaService.getLLMConfigs())
+  const [configs, setConfigs] = useState<LLMConfig[]>(() => userSettings.getLLMConfigs())
   const [activeId, setActiveId] = useState<string | null>(
-    () => quotaService.getActiveLLMConfig()?.id ?? null
+    () => userSettings.getActiveLLMConfig()?.id ?? null
   )
 
   // 表单状态：null 表示不在编辑
@@ -46,8 +46,8 @@ export function LLMSettings() {
   const [deleteTarget, setDeleteTarget] = useState<LLMConfig | null>(null)
 
   const refresh = () => {
-    setConfigs(quotaService.getLLMConfigs())
-    setActiveId(quotaService.getActiveLLMConfig()?.id ?? null)
+    setConfigs(userSettings.getLLMConfigs())
+    setActiveId(userSettings.getActiveLLMConfig()?.id ?? null)
   }
 
   const startCreate = () => {
@@ -164,20 +164,20 @@ export function LLMSettings() {
       apiKey: draft.apiKey.trim(),
       modelId: draft.modelId.trim(),
     }
-    quotaService.upsertLLMConfig(next)
+    userSettings.upsertLLMConfig(next)
     refresh()
     setDraft(null)
     success(t('llm.saved'))
   }
 
   const handleSetActive = (config: LLMConfig) => {
-    quotaService.setActiveLLMConfig(config.id)
+    userSettings.setActiveLLMConfig(config.id)
     refresh()
   }
 
   const handleDelete = () => {
     if (!deleteTarget) return
-    quotaService.removeLLMConfig(deleteTarget.id)
+    userSettings.removeLLMConfig(deleteTarget.id)
     setDeleteTarget(null)
     refresh()
     success(t('llm.removed'))

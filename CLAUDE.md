@@ -56,13 +56,12 @@ Backend (`functions/` reads `env`):
 | `AI_BASE_URL` | Base URL, e.g. `https://api.openai.com/v1` or `https://api.anthropic.com/v1` |
 | `AI_PROVIDER` | `openai` (default) or `anthropic` — selects request shape and streaming parser |
 | `AI_MODEL_ID` | Model id, e.g. `gpt-5`, `claude-sonnet-4-5` |
-| `ACCESS_PASSWORD` | Optional. If set, requests carrying a matching `X-Access-Password` header are quota-exempt |
+| `ACCESS_PASSWORD` | Optional. If set, a request that carries an `X-Access-Password` header must present the correct value |
 
 Frontend (`import.meta.env.VITE_*`):
 | Var | Purpose |
 |---|---|
 | `VITE_API_BASE_URL` | API base. Defaults to `/api` (same-origin Pages Functions). Point at a Worker URL when the backend is deployed separately |
-| `VITE_DAILY_QUOTA` | Free-tier daily request cap for visitors without a password. Defaults to `10` |
 | `VITE_DRAWIO_BASE_URL` | Draw.io embed origin. Defaults to `https://embed.diagrams.net` |
 
 ## Architecture
@@ -140,9 +139,9 @@ format: OpenAI `choices[0].delta.content`, Anthropic `content_block_delta`, plus
 
 ### Quota, access password, and custom LLM (BYOK)
 
-All three live in `src/services/quotaService.ts` and localStorage:
-- Daily quota (`ai-draw-quota`) — enforced client-side.
-- Access password (`ai-draw-access-password`) — skips the quota.
+Both live in `src/services/userSettings.ts` and localStorage:
+- Access password (`ai-draw-access-password`) — a soft gate: the backend rejects a request that
+  carries a *wrong* password, but a request without a password is allowed.
 - Custom LLM profiles (`ai-draw-llm-configs`) — **a list** of
   `{id, name, enabled, provider, baseUrl, apiKey, modelId, directConnect}` plus the `activeId`
   of the one in use. The old single-profile key (`ai-draw-llm-config`) is migrated
@@ -158,11 +157,8 @@ The active profile has two modes (`buildAuthContext()` in `src/services/aiServic
 A valid custom profile takes priority over the access password. The backend never logs request
 bodies (they may contain user API keys).
 
-**Daily quota** (`VITE_DAILY_QUOTA`, default 10/day) only rations requests served by the *operator's*
-key. It is skipped entirely when the request carries an access password **or** a usable custom
-profile — the user pays for their own model, so the site has no cost to ration. The check lives in
-`ensureQuotaAvailable()` / `checkAndConsumeQuota()` (`src/services/aiService.ts`), and the backend
-mirrors it by returning `X-Quota-Exempt: true` for requests that carry a custom profile.
+There is **no daily request quota** — the earlier 10-per-day cap was removed, matching the
+reference deployment. Visitors on the operator's key are unlimited as well.
 
 **Probing a profile** (`src/services/llmProbe.ts`) — "load models" and "test connection" follow the
 profile's own mode: direct mode hits the provider from the browser (CORS may block it), proxy mode
@@ -241,7 +237,7 @@ Engine accents: Mermaid → brand, Excalidraw → warning, Draw.io → success.
 - **Tailwind CSS 4** via the `@tailwindcss/vite` plugin; UI primitives live in `src/components/ui/`
   (Radix-based Dialog/Dropdown/Toast/Tooltip, `cn()` from `src/lib/utils.ts`).
 - **i18n**: `useTranslation()` from `react-i18next` in components; `i18n.t()` in plain modules
-  (`fileUtils`, `aiService`, `quotaService`). Locale files must stay key-aligned.
+  (`fileUtils`, `aiService`, `userSettings`). Locale files must stay key-aligned.
 - **Comments and UI strings are mixed Chinese/English** — match the surrounding file's language.
 - **Radix components use `asChild`** where a custom trigger is needed.
 - `verbatimModuleSyntax` is on: use `import type` for type-only imports.

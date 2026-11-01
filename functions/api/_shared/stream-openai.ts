@@ -5,7 +5,6 @@ import { corsHeaders } from './cors'
 export async function streamOpenAI(
   messages: Message[],
   env: Env,
-  exempt: boolean = false,
   llmConfig?: LLMConfig
 ): Promise<Response> {
   const settings = resolveLlmSettings(env, llmConfig)
@@ -88,7 +87,6 @@ export async function streamOpenAI(
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
       'Connection': 'keep-alive',
-      'X-Quota-Exempt': exempt ? 'true' : 'false',
     },
   })
 }

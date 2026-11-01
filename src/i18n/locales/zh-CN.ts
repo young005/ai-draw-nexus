@@ -323,10 +323,6 @@ export const zh_CN = {
     modelIdRequired: "请输入模型 ID",
     llmSaved: "LLM 配置已保存",
     llmCleared: "LLM 配置已清除",
-    dailyQuota: "每日配额",
-    quotaUsed: "已使用 {{used}} / {{total}} 次",
-    quotaUnlimited: "无限制",
-    quotaCustomLLM: "自定义模型，不限次",
   },  disclaimerDialog: {
     dataStorage1: "数据保存在浏览器本地",
     dataStorage2: "不会上传至服务器",
@@ -373,7 +369,6 @@ export const zh_CN = {
     aiGeneratedContentInvalid: "AI 生成的图表代码格式有误，请重试生成",
     parseUrlFailed: "解析URL失败",
     unknownError: "未知错误",
-    quotaExceeded: "今日配额已用完，请明天再试或设置访问密码",
     unsupportedFileType: "不支持的文件类型：{{type}}",
   },
   landing: {

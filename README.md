@@ -57,7 +57,7 @@ Bring your own API key instead of using the site's:
 - **Test Connection** tells you exactly what went wrong - wrong key, unknown model, wrong base
   URL, rate limit, or a CORS block
 - Proxy mode forwards through the backend, direct mode talks to the provider from the browser
-- A custom profile also lifts the site's daily quota - you pay for your own model
+- With a custom profile the requests are billed to your own provider - the site keeps no count
 
 ### Bilingual & Local-First
 
@@ -142,9 +142,8 @@ AI_MODEL_ID=gpt-4o-mini
 
 > Supports OpenAI, Anthropic, and other OpenAI-compatible services
 >
-> Optional: `ACCESS_PASSWORD` lets visitors unlock unlimited use of the site's own key.
-> `VITE_DAILY_QUOTA` (default `10`) caps daily requests for visitors without a password - a
-> visitor who brings their own model key is not counted.
+> Optional: `ACCESS_PASSWORD` - if set, a request that carries the header must present the
+> correct value. There is no daily request cap.
 
 ### 3. Start Development Server
 

@@ -323,10 +323,6 @@ export const en_US = {
     modelIdRequired: "Please enter model ID",
     llmSaved: "LLM config saved",
     llmCleared: "LLM config cleared",
-    dailyQuota: "Daily Quota",
-    quotaUsed: "Used {{used}} / {{total}}",
-    quotaUnlimited: "Unlimited",
-    quotaCustomLLM: "Custom model, unlimited",
   },  disclaimerDialog: {
     dataStorage1: "Data is stored in your browser locally",
     dataStorage2: "Data is not uploaded to the server",
@@ -373,7 +369,6 @@ export const en_US = {
     aiGeneratedContentInvalid: "AI generated invalid diagram code. Please retry generation.",
     parseUrlFailed: "Failed to parse URL",
     unknownError: "Unknown error",
-    quotaExceeded: "Daily quota exhausted. Try again tomorrow or set an access password.",
     unsupportedFileType: "Unsupported file type: {{type}}",
   },
   landing: {

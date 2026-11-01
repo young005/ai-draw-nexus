@@ -1,5 +1,5 @@
 import type { Env, ChatRequest } from './_shared/types'
-import { resolveLlmSettings, isUsableLLMConfig, UpstreamError } from './_shared/types'
+import { resolveLlmSettings, UpstreamError } from './_shared/types'
 import { corsHeaders } from './_shared/cors'
 import { validateAccessPassword } from './_shared/auth'
 import { callOpenAI, callAnthropic } from './_shared/ai-providers'
@@ -19,8 +19,7 @@ export const onRequestPost: PagesFunction<Env> = async (context: PagesContext) =
   const { request, env } = context
 
   try {
-    const { valid, exempt } = validateAccessPassword(request, env)
-    if (!valid) {
+    if (!validateAccessPassword(request, env)) {
       return new Response(JSON.stringify({ error: '访问密码错误' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -40,18 +39,15 @@ export const onRequestPost: PagesFunction<Env> = async (context: PagesContext) =
     // 请求级自定义配置优先，其次回落到服务端环境变量
     const settings = resolveLlmSettings(env, llmConfig)
     const provider = settings.provider
-    // 用户自带密钥时不消耗站点配额（服务端没有成本）
-    const quotaExempt = exempt || isUsableLLMConfig(llmConfig)
-    const quotaHeaders = { ...corsHeaders, 'X-Quota-Exempt': quotaExempt ? 'true' : 'false' }
 
     if (stream) {
       switch (provider) {
         case 'anthropic':
           // 必须 await，否则 promise 的 rejection 会逃出 try，上游错误会变成 500 堆栈
-          return await streamAnthropic(messages, env, quotaExempt, llmConfig)
+          return await streamAnthropic(messages, env, llmConfig)
         case 'openai':
         default:
-          return await streamOpenAI(messages, env, quotaExempt, llmConfig)
+          return await streamOpenAI(messages, env, llmConfig)
       }
     } else {
       let response: string
@@ -67,7 +63,7 @@ export const onRequestPost: PagesFunction<Env> = async (context: PagesContext) =
       }
 
       return new Response(JSON.stringify({ content: response }), {
-        headers: { ...quotaHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
   } catch (error) {
