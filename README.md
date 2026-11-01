@@ -35,6 +35,36 @@ Beyond text descriptions, also supports:
 - **Image Recreation** - Upload images, AI recognizes and recreates diagrams
 - **Link Parsing** - Enter URLs to auto-parse content and generate diagrams
 
+### Paste, Don't Upload
+
+The input box accepts what you paste, not just what you pick:
+
+- **Paste a screenshot** - `Ctrl+V` an image straight into the chat or the homepage composer
+- **Paste a document** - dropped in as text the model can read
+- **Paste diagram source** - Mermaid / Draw.io / Excalidraw code is detected and offered as
+  "import as a new project" instead of being sent as a message
+- **Import files** - `.mmd`, `.mermaid`, `.txt`, `.excalidraw`, `.json`, `.drawio`, `.xml`; the
+  engine is detected from the file extension
+
+### Your Own Model
+
+Bring your own API key instead of using the site's:
+
+- Save **several profiles** (DeepSeek, MiniMax, Qwen, GLM, OpenRouter, Ollama, ...) and switch
+  between them at any time
+- Presets fill in the endpoint and API type for you; **Load Models** fetches the full list from
+  the provider's `/models` endpoint
+- **Test Connection** tells you exactly what went wrong - wrong key, unknown model, wrong base
+  URL, rate limit, or a CORS block
+- Proxy mode forwards through the backend, direct mode talks to the provider from the browser
+- A custom profile also lifts the site's daily quota - you pay for your own model
+
+### Bilingual & Local-First
+
+- Chinese and English UI, switchable at any time
+- Projects, version history **and chat transcripts** (including pasted images) are stored in your
+  browser's IndexedDB - nothing is uploaded
+
 ## Quick Start
 
 ### Option 1: Quick Generate from Homepage
@@ -74,6 +104,21 @@ In the chat panel on the right side of the editor, you can:
 - Click any version to preview
 - Click "Restore" to revert to that version
 
+### Chat History
+
+- Every conversation is saved per project in your browser and restored on reload
+- Pasted images stay with their message
+- "New conversation" clears the stored transcript, not just the visible one
+
+### Custom LLM Profiles
+
+Open **Settings** in the sidebar:
+
+1. Pick a provider preset (or type a custom endpoint)
+2. Enter the API key, then **Load Models** to pick from the provider's list - or type the model ID
+3. **Test Connection** to confirm the key, endpoint and model all work
+4. Save, then use "Use this one" to switch the active profile
+
 ## Local Development
 
 ### 1. Clone and Install Dependencies
@@ -96,6 +141,10 @@ AI_MODEL_ID=gpt-4o-mini
 ```
 
 > Supports OpenAI, Anthropic, and other OpenAI-compatible services
+>
+> Optional: `ACCESS_PASSWORD` lets visitors unlock unlimited use of the site's own key.
+> `VITE_DAILY_QUOTA` (default `10`) caps daily requests for visitors without a password - a
+> visitor who brings their own model key is not counted.
 
 ### 3. Start Development Server
 
@@ -146,10 +195,11 @@ pnpm run pages:deploy
 
 ## Tech Stack
 
-- Frontend: React 19 + Vite + TypeScript + Tailwind CSS
+- Frontend: React 19 + Vite + TypeScript + Tailwind CSS 4
+- i18n: i18next + react-i18next (zh-CN / en-US)
 - State: Zustand
-- Storage: Dexie.js (IndexedDB)
-- Backend: Cloudflare Pages Functions
+- Storage: Dexie.js (IndexedDB) - projects, version history, chat transcripts
+- Backend: Cloudflare Pages Functions (`/api/chat`, `/api/llm`, `/api/parse-url`)
 
 ## License
 
