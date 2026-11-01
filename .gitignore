@@ -12,19 +12,48 @@ dist
 dist-ssr
 *.local
 
-# Editor directories and files
+# 环境变量与本地配置（含模型密钥，绝不提交）
+.env
+.env.*
+!.env.example
+*.env
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+*.vars
+*.vars.*
+!*.vars.example
+
+# 证书与私钥
+*.pem
+*.key
+*.p12
+*.pfx
+*.keystore
+*.jks
+
+# 编辑器与工具的本地目录
 .vscode/*
 !.vscode/extensions.json
 .idea
 .DS_Store
+Thumbs.db
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+.claude/settings.local.json
+.vite/
+coverage/
+*.tsbuildinfo
 
-*.env
-*.vars
+# 临时与备份文件
+*.tmp
+*.bak
+*.orig
+*.rej
+*~
 
 .wrangler
 # bash crash dumps
