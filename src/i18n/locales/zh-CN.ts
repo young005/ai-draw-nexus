@@ -326,6 +326,7 @@ export const zh_CN = {
     dailyQuota: "每日配额",
     quotaUsed: "已使用 {{used}} / {{total}} 次",
     quotaUnlimited: "无限制",
+    quotaCustomLLM: "自定义模型，不限次",
   },  disclaimerDialog: {
     dataStorage1: "数据保存在浏览器本地",
     dataStorage2: "不会上传至服务器",

@@ -1,5 +1,5 @@
 import type { Env, ChatRequest } from './_shared/types'
-import { resolveLlmSettings } from './_shared/types'
+import { resolveLlmSettings, isUsableLLMConfig, UpstreamError } from './_shared/types'
 import { corsHeaders } from './_shared/cors'
 import { validateAccessPassword } from './_shared/auth'
 import { callOpenAI, callAnthropic } from './_shared/ai-providers'
@@ -40,15 +40,18 @@ export const onRequestPost: PagesFunction<Env> = async (context: PagesContext) =
     // 请求级自定义配置优先，其次回落到服务端环境变量
     const settings = resolveLlmSettings(env, llmConfig)
     const provider = settings.provider
-    const quotaHeaders = { ...corsHeaders, 'X-Quota-Exempt': exempt ? 'true' : 'false' }
+    // 用户自带密钥时不消耗站点配额（服务端没有成本）
+    const quotaExempt = exempt || isUsableLLMConfig(llmConfig)
+    const quotaHeaders = { ...corsHeaders, 'X-Quota-Exempt': quotaExempt ? 'true' : 'false' }
 
     if (stream) {
       switch (provider) {
         case 'anthropic':
-          return streamAnthropic(messages, env, exempt, llmConfig)
+          // 必须 await，否则 promise 的 rejection 会逃出 try，上游错误会变成 500 堆栈
+          return await streamAnthropic(messages, env, quotaExempt, llmConfig)
         case 'openai':
         default:
-          return streamOpenAI(messages, env, exempt, llmConfig)
+          return await streamOpenAI(messages, env, quotaExempt, llmConfig)
       }
     } else {
       let response: string
@@ -71,8 +74,10 @@ export const onRequestPost: PagesFunction<Env> = async (context: PagesContext) =
     // 注意：不要打印请求体，其中可能含有用户自己的 API Key
     console.error('Chat error:', error instanceof Error ? error.message : 'Unknown error')
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-    return new Response(JSON.stringify({ error: errorMessage }), {
-      status: 500,
+    // 上游服务商的错误保留状态码，前端据此判断具体原因
+    const upstreamStatus = error instanceof UpstreamError ? error.status : undefined
+    return new Response(JSON.stringify({ error: errorMessage, status: upstreamStatus }), {
+      status: upstreamStatus ?? 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   }

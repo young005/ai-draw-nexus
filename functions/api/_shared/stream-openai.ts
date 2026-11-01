@@ -1,5 +1,5 @@
 import type { Env, Message, LLMConfig } from './types'
-import { resolveLlmSettings } from './types'
+import { resolveLlmSettings, UpstreamError } from './types'
 import { corsHeaders } from './cors'
 
 export async function streamOpenAI(
@@ -32,7 +32,7 @@ export async function streamOpenAI(
 
   if (!response.ok) {
     const error = await response.text()
-    throw new Error(`OpenAI API error: ${error}`)
+    throw new UpstreamError(response.status, `OpenAI API error: ${error}`)
   }
 
   const { readable, writable } = new TransformStream()

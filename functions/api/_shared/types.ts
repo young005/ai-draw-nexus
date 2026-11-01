@@ -58,15 +58,31 @@ export interface AnthropicResponse {
   }>
 }
 
-/** 解析实际生效的模型配置：请求级配置优先，其次是服务端环境变量 */
-export function resolveLlmSettings(env: Env, llmConfig?: LLMConfig) {
-  const useCustom = !!(
+/** 上游服务商返回的错误，保留状态码以便前端判断原因 */
+export class UpstreamError extends Error {
+  status: number
+
+  constructor(status: number, message: string) {
+    super(message)
+    this.name = 'UpstreamError'
+    this.status = status
+  }
+}
+
+/** 请求级配置是否完整可用（用户自带密钥） */
+export function isUsableLLMConfig(llmConfig?: LLMConfig): boolean {
+  return !!(
     llmConfig &&
     llmConfig.enabled !== false &&
     llmConfig.baseUrl?.trim() &&
     llmConfig.apiKey?.trim() &&
     llmConfig.modelId?.trim()
   )
+}
+
+/** 解析实际生效的模型配置：请求级配置优先，其次是服务端环境变量 */
+export function resolveLlmSettings(env: Env, llmConfig?: LLMConfig) {
+  const useCustom = isUsableLLMConfig(llmConfig)
 
   return {
     provider: (useCustom ? llmConfig!.provider : undefined) || env.AI_PROVIDER || 'openai',

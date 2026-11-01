@@ -33,6 +33,7 @@ export function ProfilePage() {
 
   const quotaPercentage = Math.min(100, (quotaUsed / quotaTotal) * 100)
   const hasPassword = quotaService.hasAccessPassword()
+  const hasCustomLLM = quotaService.hasLLMConfig()
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -68,6 +69,7 @@ export function ProfilePage() {
                   quotaTotal={quotaTotal}
                   quotaPercentage={quotaPercentage}
                   hasPassword={hasPassword}
+                  hasCustomLLM={hasCustomLLM}
                 />
 
                 {/* 分隔线 */}
@@ -102,9 +104,16 @@ interface QuotaSectionProps {
   quotaTotal: number
   quotaPercentage: number
   hasPassword: boolean
+  hasCustomLLM: boolean
 }
 
-function QuotaSection({ quotaUsed, quotaTotal, quotaPercentage, hasPassword }: QuotaSectionProps) {
+function QuotaSection({
+  quotaUsed,
+  quotaTotal,
+  quotaPercentage,
+  hasPassword,
+  hasCustomLLM,
+}: QuotaSectionProps) {
   const { t } = useTranslation()
 
   return (
@@ -126,6 +135,11 @@ function QuotaSection({ quotaUsed, quotaTotal, quotaPercentage, hasPassword }: Q
           {hasPassword && (
             <span className="rounded-full bg-success-soft px-2 py-0.5 text-xs text-success">
               {t('profile.quotaUnlimited')}
+            </span>
+          )}
+          {!hasPassword && hasCustomLLM && (
+            <span className="rounded-full bg-success-soft px-2 py-0.5 text-xs text-success">
+              {t('profile.quotaCustomLLM')}
             </span>
           )}
         </div>

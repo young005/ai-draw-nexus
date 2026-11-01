@@ -1,5 +1,6 @@
 import type { PayloadMessage, ChatRequest } from '@/types'
 import { quotaService, isValidLLMConfig } from './quotaService'
+import { describeLLMError, truncateDetail } from '@/lib/llmErrors'
 import type { LLMConfig } from '@/types'
 import i18n from '@/i18n'
 
@@ -42,9 +43,20 @@ function buildAuthContext(): AuthContext {
 }
 
 /**
+ * 本次请求是否由用户自己的模型服务承担。
+ * 用户自带密钥时站点没有成本，不应该占用每日配额。
+ */
+function usesCustomLLM(): boolean {
+  return isValidLLMConfig(quotaService.getActiveLLMConfig())
+}
+
+/**
  * 检查配额并在需要时消耗
  */
 function checkAndConsumeQuota(response: Response): void {
+  // 用户自带模型时不消耗站点配额
+  if (usesCustomLLM()) return
+
   const quotaExempt = response.headers.get('X-Quota-Exempt')
   // 只有当不免除配额时才消耗
   if (quotaExempt !== 'true') {
@@ -53,9 +65,12 @@ function checkAndConsumeQuota(response: Response): void {
 }
 
 /**
- * 检查是否有足够配额（有密码时跳过检查）
+ * 检查是否有足够配额
+ * 访问密码与自定义模型都会跳过配额限制
  */
 function ensureQuotaAvailable(): void {
+  if (usesCustomLLM()) return
+
   if (!quotaService.hasAccessPassword() && !quotaService.hasQuotaRemaining()) {
     throw new Error(i18n.t('errors.quotaExceeded'))
   }
@@ -135,6 +150,29 @@ function buildDirectRequest(
       stream,
     }),
   }
+}
+
+/**
+ * 把失败响应转成带原因的报错，避免把服务商返回的整页 HTML 抛给用户
+ */
+async function toRequestError(response: Response, mode: 'direct' | 'proxy'): Promise<Error> {
+  const text = await response.text()
+  let status = response.status
+  let detail = text
+
+  // 后端代理模式会把上游状态码与信息放在 JSON 里
+  try {
+    const payload = JSON.parse(text) as { error?: string; status?: number }
+    if (payload && typeof payload.error === 'string') {
+      detail = payload.error
+      if (typeof payload.status === 'number') status = payload.status
+    }
+  } catch {
+    // 不是 JSON，按原文处理
+  }
+
+  const error = describeLLMError(status, detail, mode)
+  return new Error(error.detail ? `${error.message}（${truncateDetail(error.detail)}）` : error.message)
 }
 
 interface ParseUrlResponse {
@@ -264,8 +302,7 @@ export const aiService = {
         body: request.body,
       })
       if (!response.ok) {
-        const error = await response.text()
-        throw new Error(`AI request failed: ${error}`)
+        throw await toRequestError(response, 'direct')
       }
       const data = await response.json()
       return data.content?.[0]?.text || data.choices?.[0]?.message?.content || ''
@@ -280,8 +317,7 @@ export const aiService = {
     })
 
     if (!response.ok) {
-      const error = await response.text()
-      throw new Error(`AI request failed: ${error}`)
+      throw await toRequestError(response, 'proxy')
     }
 
     checkAndConsumeQuota(response)
@@ -315,8 +351,7 @@ export const aiService = {
         body: request.body,
       })
       if (!response.ok) {
-        const error = await response.text()
-        throw new Error(`AI request failed: ${error}`)
+        throw await toRequestError(response, 'direct')
       }
       const fullContent = await readSSE(response, onChunk)
       onComplete?.(fullContent)
@@ -332,8 +367,7 @@ export const aiService = {
     })
 
     if (!response.ok) {
-      const error = await response.text()
-      throw new Error(`AI request failed: ${error}`)
+      throw await toRequestError(response, 'proxy')
     }
 
     // 流式请求成功后检查并消耗配额

@@ -1,5 +1,5 @@
 import type { Env, Message, LLMConfig } from './types'
-import { resolveLlmSettings } from './types'
+import { resolveLlmSettings, UpstreamError } from './types'
 import { corsHeaders } from './cors'
 import { convertContentPartsToAnthropic } from './ai-providers'
 
@@ -43,7 +43,7 @@ export async function streamAnthropic(
 
   if (!response.ok) {
     const error = await response.text()
-    throw new Error(`Anthropic API error: ${error}`)
+    throw new UpstreamError(response.status, `Anthropic API error: ${error}`)
   }
 
   const { readable, writable } = new TransformStream()

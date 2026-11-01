@@ -326,6 +326,7 @@ export const en_US = {
     dailyQuota: "Daily Quota",
     quotaUsed: "Used {{used}} / {{total}}",
     quotaUnlimited: "Unlimited",
+    quotaCustomLLM: "Custom model, unlimited",
   },  disclaimerDialog: {
     dataStorage1: "Data is stored in your browser locally",
     dataStorage2: "Data is not uploaded to the server",

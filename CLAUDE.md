@@ -158,6 +158,12 @@ The active profile has two modes (`buildAuthContext()` in `src/services/aiServic
 A valid custom profile takes priority over the access password. The backend never logs request
 bodies (they may contain user API keys).
 
+**Daily quota** (`VITE_DAILY_QUOTA`, default 10/day) only rations requests served by the *operator's*
+key. It is skipped entirely when the request carries an access password **or** a usable custom
+profile — the user pays for their own model, so the site has no cost to ration. The check lives in
+`ensureQuotaAvailable()` / `checkAndConsumeQuota()` (`src/services/aiService.ts`), and the backend
+mirrors it by returning `X-Quota-Exempt: true` for requests that carry a custom profile.
+
 **Probing a profile** (`src/services/llmProbe.ts`) — "load models" and "test connection" follow the
 profile's own mode: direct mode hits the provider from the browser (CORS may block it), proxy mode
 goes through `functions/api/llm.ts`. That endpoint is effectively an open forwarder, so it refuses

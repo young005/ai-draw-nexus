@@ -1,5 +1,5 @@
 import type { Env, Message, ContentPart, AnthropicContentPart, OpenAIResponse, AnthropicResponse, LLMConfig } from './types'
-import { resolveLlmSettings } from './types'
+import { resolveLlmSettings, UpstreamError } from './types'
 
 export function convertContentPartsToAnthropic(parts: ContentPart[]): AnthropicContentPart[] {
   return parts
@@ -54,7 +54,7 @@ export async function callOpenAI(messages: Message[], env: Env, llmConfig?: LLMC
 
   if (!response.ok) {
     const error = await response.text()
-    throw new Error(`OpenAI API error: ${error}`)
+    throw new UpstreamError(response.status, `OpenAI API error: ${error}`)
   }
 
   const data: OpenAIResponse = await response.json()
@@ -95,7 +95,7 @@ export async function callAnthropic(messages: Message[], env: Env, llmConfig?: L
 
   if (!response.ok) {
     const error = await response.text()
-    throw new Error(`Anthropic API error: ${error}`)
+    throw new UpstreamError(response.status, `Anthropic API error: ${error}`)
   }
 
   const data: AnthropicResponse = await response.json()
