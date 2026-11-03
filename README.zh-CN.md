@@ -125,6 +125,19 @@ cd smart-ai-draw
 pnpm install
 ```
 
+<details>
+<summary>用压缩包而不是 git clone</summary>
+
+```bash
+tar -xzf ai-draw-nexus.tar.gz
+cd ai-draw-nexus
+pnpm install
+cp .dev.vars.example .dev.vars   # 填入你的 API Key
+pnpm run dev
+```
+
+</details>
+
 ### 2. 配置环境变量
 
 在根目录下创建 `.dev.vars` 文件：
