@@ -58,3 +58,6 @@ coverage/
 .wrangler
 # bash crash dumps
 bash.exe.stackdump
+
+# 本地打包产物
+*.tar.gz
