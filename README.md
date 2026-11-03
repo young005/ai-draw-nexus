@@ -129,6 +129,19 @@ cd ai-draw-nexus
 pnpm install
 ```
 
+<details>
+<summary>Using the tarball instead of git clone</summary>
+
+```bash
+tar -xzf ai-draw-nexus.tar.gz
+cd ai-draw-nexus
+pnpm install
+cp .dev.vars.example .dev.vars   # fill in your API key
+pnpm run dev
+```
+
+</details>
+
 ### 2. Configure Environment Variables
 
 Create a `.dev.vars` file in the root directory:
