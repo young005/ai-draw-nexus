@@ -103,7 +103,7 @@ wrangler pages secret put AI_MODEL_ID
 | `AI_BASE_URL` | 上游基址，如 `https://api.openai.com/v1` 或 `https://api.anthropic.com/v1` |
 | `AI_PROVIDER` | `openai`（默认）或 `anthropic`，决定请求形状与流式解析器 |
 | `AI_MODEL_ID` | 模型 id，如 `gpt-5`、`claude-sonnet-4-5` |
-| `ACCESS_PASSWORD` | 可选。设置后，携带匹配 `X-Access-Password` 头的请求配额豁免 |
+| `ACCESS_PASSWORD` | 可选。设置后，携带 `X-Access-Password` 头的请求必须提供正确密码 |
 
 本地开发时写入根目录 `.dev.vars`（gitignore）。仓库只跟踪 `.dev.vars.example`：
 
@@ -119,14 +119,12 @@ AI_MODEL_ID=gpt-5
 | 变量 | 用途 |
 |---|---|
 | `VITE_API_BASE_URL` | API 基址，默认 `/api`（同源 Pages Functions）。后端独立部署为 Worker 时指向 Worker URL |
-| `VITE_DAILY_QUOTA` | 未设置访问密码的访客每日请求上限，默认 `10` |
 | `VITE_DRAWIO_BASE_URL` | Draw.io 嵌入源，默认 `https://embed.diagrams.net` |
 
 本地写入 `.env`（gitignore）。只跟踪 `.env.example`：
 
 ```env
 VITE_API_BASE_URL=/api
-VITE_DAILY_QUOTA=10
 ```
 
 > 注意：`VITE_DRAWIO_BASE_URL` 代码支持但未列入 `.env.example`；`ACCESS_PASSWORD` 代码支持但未列入 `deploy.md` 密钥表。
@@ -166,18 +164,17 @@ VITE_DAILY_QUOTA=10
 
 ## 6. 运行时特性与运维要点
 
-- **CORS**：`_shared/cors.ts` 允许任意来源（`Allow-Origin: *`），方法 GET/POST/OPTIONS，允许头 `Content-Type, X-Access-Password`，暴露头 `X-Quota-Exempt`。
+- **CORS**：`_shared/cors.ts` 允许任意来源（`Allow-Origin: *`），方法 GET/POST/OPTIONS，允许头 `Content-Type, X-Access-Password, X-Custom-LLM`。
 - **流式**：后端把上游 SSE 归一化为统一 `{content}` 形状（`text/event-stream`），前端只解析一种形状。
 - **SSRF 防护**：`/api/llm` 拒绝 loopback、`*.local`/`*.internal`、`0.0.0.0`、IPv6 `fc/fd/fe80`、私网 IPv4 段及非 http(s) 协议。
 - **密钥安全**：后端**不记录请求体**（可能含用户 API Key）。
-- **配额**：在浏览器前端强制执行（`VITE_DAILY_QUOTA`）；设置访问密码或使用有效自定义 LLM 的请求配额豁免（经 `X-Quota-Exempt` 头回传）。
 - **无状态后端**：Workers 不保存任何会话/数据，可水平扩展。
 
 ---
 
 ## 7. 部署核对清单
 
-- [ ] 后端 Worker 已配置 `AI_PROVIDER` / `AI_BASE_URL` / `AI_API_KEY` / `AI_MODEL_ID`（如需配额豁免再加 `ACCESS_PASSWORD`）。
+- [ ] 后端 Worker 已配置 `AI_PROVIDER` / `AI_BASE_URL` / `AI_API_KEY` / `AI_MODEL_ID`（如需访客密码再加 `ACCESS_PASSWORD`）。
 - [ ] 前端 Pages 已配置 `VITE_API_BASE_URL` 指向后端 Worker URL。
 - [ ] 后端独立部署时，前端默认 `/api` 基址会 404 —— 必须改用 Worker URL 并重新部署。
 - [ ] 后端根目录确认为 `functions/`（`deploy.md` 中的 `worker` 为历史命名）。

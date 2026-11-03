@@ -16,7 +16,7 @@
 | AI 生成与编辑 | 自然语言新建 / 增量修改现有图表 | `useAIGenerate`、`ChatPanel` |
 | 多模态输入 | 图片、文档、URL、粘贴源码 | `fileUtils`、`ImportDialog`、`usePasteSource`、`parse-url` |
 | 版本历史 | 自动/手动快照、预览、恢复 | `VersionPanel`、`versionRepository` |
-| 设置 | 自定义 LLM（BYOK）、访问密码、语言 | `ProfilePage`、`LLMSettings`、`quotaService` |
+| 设置 | 自定义 LLM（BYOK）、访问密码、语言 | `ProfilePage`、`LLMSettings`、`userSettings` |
 | 营销页 | 产品介绍 | `LandingPage` |
 
 ---
@@ -67,7 +67,7 @@ Tooltip、Loading、Toast/Toaster，外加 `LanguageSwitcher`。
                     ┌────────────┴─────────────┐                       │
                     ▼                          ▼                       │
             Dexie (IndexedDB)            localStorage                  │
-        projects/versionHistory/     配额/密码/LLM配置/主题/语言         │
+        projects/versionHistory/     密码/LLM配置/主题/语言             │
               chatMessages                                             │
 ```
 
@@ -162,9 +162,9 @@ showSourceCode()  hideSourceCode()  toggleSourceCode()
 
 ---
 
-## 6. 设置域（BYOK / 配额 / 语言）
+## 6. 设置域（BYOK / 访问密码 / 语言）
 
-- **自定义 LLM 配置**（`LLMSettings` + `quotaService`）：支持多个 profile，
+- **自定义 LLM 配置**（`LLMSettings` + `userSettings`）：支持多个 profile，
   `{id, name, enabled, provider, baseUrl, apiKey, modelId, directConnect}` + `activeId`。
   旧单配置键 `ai-draw-llm-config` 在首次读取时自动迁移。
 - **两种模式**（`buildAuthContext()`）：
@@ -172,7 +172,7 @@ showSourceCode()  hideSourceCode()  toggleSourceCode()
   - 直连模式 → 浏览器直接调 `{baseUrl}/chat/completions` 或 `{baseUrl}/messages`（可能受 CORS 限制）。
 - **探测**（`llmProbe.ts`）：按 profile 模式直连或走 `/api/llm`；失败经 `llmErrors.ts` 归一化，
   UI 能提示具体原因（错 key / 未知模型 / 错 baseUrl / 限流 / CORS）。
-- **配额与密码**：`VITE_DAILY_QUOTA`（默认 10）前端强制；`ACCESS_PASSWORD` 或有效自定义配置 → 配额豁免。
+- **访问密码**：`ACCESS_PASSWORD` 为软闸 —— 后端只拒绝「带了请求头但密码错误」的请求，不带密码头则放行。站点没有每日请求次数限制。
 - **语言**：`LanguageSwitcher` + i18next，检测顺序 localStorage → navigator，回退 zh-CN。
 
 ---
@@ -184,7 +184,7 @@ showSourceCode()  hideSourceCode()  toggleSourceCode()
   createDialog, importDialog, editor, chat, versionPanel, sourceCodePanel, mermaidRenderer,
   excalidrawEditor, drawioEditor, profile, ai, errors, landing, toast, llm, paste`。
 - 每语言约 445 个叶子键，两语言键必须对齐。
-- 组件用 `useTranslation()`；纯模块（`fileUtils`、`aiService`、`quotaService`、`llmErrors`、
+- 组件用 `useTranslation()`；纯模块（`fileUtils`、`aiService`、`userSettings`、`llmErrors`、
   `importService`、`useToast`）用 `i18n.t()`。
 
 ---

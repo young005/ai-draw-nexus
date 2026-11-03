@@ -60,7 +60,7 @@
 ├─────────────────────────────────────────────┤
 │ 编排层  src/hooks/useAIGenerate.ts           │  生成主流程、自动修复、落库
 ├─────────────────────────────────────────────┤
-│ 服务层  src/services/                        │  HTTP、配额、仓库(Repository)、导入、探测
+│ 服务层  src/services/                        │  HTTP、用户设置、仓库(Repository)、导入、探测
 ├─────────────────────────────────────────────┤
 │ 状态层  src/stores/ (Zustand)                │  聊天 / 编辑器 / 请求体
 ├─────────────────────────────────────────────┤
@@ -102,8 +102,8 @@ functions/api/_shared/     共享：providers、stream、auth、cors、types
 
 | 文件 | 职责 |
 |---|---|
-| `aiService.ts` | 调 `/api/chat`、`/api/parse-url`；代理/直连两种模式；SSE 解析；配额与鉴权上下文构建 |
-| `quotaService.ts` | localStorage：每日配额、访问密码、多个自定义 LLM 配置（含旧单配置迁移） |
+| `aiService.ts` | 调 `/api/chat`、`/api/parse-url`；代理/直连两种模式；SSE 解析；鉴权上下文构建 |
+| `userSettings.ts` | localStorage：访问密码、多个自定义 LLM 配置（含旧单配置迁移） |
 | `llmProbe.ts` | `loadLLMModels` / `testLLMConfig`（按配置模式直连或走 `/api/llm`） |
 | `projectRepository.ts` | 项目 CRUD；`delete` 在单事务中级联删除版本与聊天；按标题搜索 |
 | `versionRepository.ts` | 版本快照 CRUD |
@@ -171,7 +171,6 @@ Excalidraw 与 Draw.io 组件以 `projectId` 作 key，切换项目时强制重�
 1. `validateAccessPassword(request, env)` → 不通过返回 `401 {"error":"访问密码错误"}`。
 2. 解析 `ChatRequest`（`messages`、`stream`、`llmConfig`），缺 `messages` 返回 400。
 3. `resolveLlmSettings(env, llmConfig)`：请求级自定义配置优先于环境变量。
-4. `quotaExempt = exempt || isUsableLLMConfig(llmConfig)`，通过 `X-Quota-Exempt` 头回传。
 5. 分支：`stream` → `streamAnthropic`/`streamOpenAI`；否则 `callAnthropic`/`callOpenAI`，返回 `{content}`。
 6. `UpstreamError` 保留上游状态码，其余 500。**不记录请求体**。
 
@@ -202,7 +201,7 @@ BYOK 代理模式下的“加载模型 / 测试连通”转发器。
 | `stream-openai.ts` | `streamOpenAI`：SSE → 归一化 `{"content": "..."}` + `[DONE]` |
 | `stream-anthropic.ts` | `streamAnthropic`：`content_block_delta.delta.text` → 归一化 `{"content": ...}` |
 | `auth.ts` | `validateAccessPassword` → `{valid, exempt}` |
-| `cors.ts` | CORS 头（允许 `X-Access-Password`，暴露 `X-Quota-Exempt`） |
+| `cors.ts` | CORS 头（允许 `X-Access-Password`、`X-Custom-LLM`） |
 
 **SSE 归一化设计**：后端把上游两种 SSE 形状统一 re-wrap 成同一种 `{content}` 格式，前端只需解析一种形状。
 
@@ -254,7 +253,6 @@ DB 名 `DiagramHubDB`，Dexie 版本演进：
 
 | 键 | 内容 |
 |---|---|
-| `ai-draw-quota` | 每日配额使用量（按日期重置） |
 | `ai-draw-access-password` | 访问密码 |
 | `ai-draw-llm-configs` | 自定义 LLM 配置列表 + activeId（旧键 `ai-draw-llm-config` 自动迁移） |
 | `ai-draw-nexus.mermaidTheme` | Mermaid 主题选择 |

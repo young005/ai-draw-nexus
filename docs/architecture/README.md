@@ -8,6 +8,7 @@ AI Diagram Hub（`ai-draw-nexus`）架构说明文档集。本目录为纯文档
 | [02-technical-architecture.md](./02-technical-architecture.md) | 技术架构：技术栈、分层、前端/后端模块、接口、数据模型、生成与自动修复机制、设计系统 |
 | [03-deployment-architecture.md](./03-deployment-architecture.md) | 部署架构：部署拓扑、Pages/Workers 部署步骤、环境变量密钥、构建流程、运维要点、核对清单 |
 | [04-application-architecture.md](./04-application-architecture.md) | 应用架构：功能域、页面与组件树、状态与数据流转、关键用例端到端实现、引擎抽象、设置与 i18n |
+| [05-drawing-prompts.md](./05-drawing-prompts.md) | 画图提示词：三套系统提示词的约束、生成链路位置、渲染层实际支持的图表类型、能力差距与改进项 |
 
 ## 一句话概览
 
